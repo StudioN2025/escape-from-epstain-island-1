@@ -89,11 +89,11 @@ class Game {
         mainLight.shadow.mapSize.width = 1024;
         mainLight.shadow.mapSize.height = 1024;
         mainLight.shadow.camera.near = 0.5;
-        mainLight.shadow.camera.far = 50;
-        mainLight.shadow.camera.left = -10;
-        mainLight.shadow.camera.right = 10;
-        mainLight.shadow.camera.top = 10;
-        mainLight.shadow.camera.bottom = -10;
+        mainLight.shadow.camera.far = 100;
+        mainLight.shadow.camera.left = -20;
+        mainLight.shadow.camera.right = 20;
+        mainLight.shadow.camera.top = 20;
+        mainLight.shadow.camera.bottom = -20;
         this.scene.add(mainLight);
         
         // Fill light
@@ -105,6 +105,12 @@ class Game {
         const rimLight = new THREE.PointLight(0xffaa66, 0.2);
         rimLight.position.set(-5, 3, -8);
         this.scene.add(rimLight);
+        
+        // Dynamic moonlight for island
+        this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
+        this.moonLight.position.set(-10, 15, -10);
+        this.moonLight.castShadow = true;
+        this.scene.add(this.moonLight);
     }
     
     setupEventListeners() {
@@ -115,6 +121,10 @@ class Game {
             }
             if (e.code === 'ShiftLeft') {
                 this.player.sprint = true;
+            }
+            if (e.code === 'Space' && this.gameActive) {
+                e.preventDefault();
+                this.player.jump();
             }
         });
         
@@ -164,6 +174,9 @@ class Game {
         
         document.addEventListener('pointerlockchange', lockChange);
         document.addEventListener('mozpointerlockchange', lockChange);
+        
+        // Prevent context menu
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     
     checkInteraction() {
@@ -172,11 +185,21 @@ class Game {
         const center = new THREE.Vector2(0, 0);
         this.raycaster.setFromCamera(center, this.camera);
         
-        const intersects = this.raycaster.intersectObjects(this.world.interactiveObjects);
+        const intersects = this.raycaster.intersectObjects(this.world.interactiveObjects, true);
         
         if (intersects.length > 0) {
-            const obj = intersects[0].object;
-            if (obj.userData && obj.userData.onInteract) {
+            // Find the actual interactive object (might be child of group)
+            let obj = intersects[0].object;
+            while (obj && !obj.userData || !obj.userData.onInteract) {
+                if (obj.parent && obj.parent.userData && obj.parent.userData.onInteract) {
+                    obj = obj.parent;
+                    break;
+                }
+                obj = obj.parent;
+                if (!obj || obj === this.scene) break;
+            }
+            
+            if (obj && obj.userData && obj.userData.onInteract) {
                 obj.userData.onInteract();
             }
         }
@@ -213,9 +236,16 @@ class Game {
             this.monster.activate();
             this.story.completeQuest('escape_basement');
             this.story.addQuest('find_boat', '🛶 Найдите лодку на острове и сбегите от монстра');
-            this.ui.updateQuest('Найдите лодку на острове и сбегите от монстра! Он уже близко...');
+            this.ui.updateQuest('Найдите лодку на острове и сбегите от монстра! Он уже далеко, но услышал вас...');
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
+            
+            // Show monster warning
+            setTimeout(() => {
+                if (this.gameActive) {
+                    this.ui.showMessage('👹 Вы слышите рычание вдалеке... Монстр приближается!', 4000);
+                }
+            }, 1000);
         }, 2000);
     }
     
@@ -236,7 +266,7 @@ class Game {
     }
     
     updateMovement(deltaTime) {
-        const speed = this.player.sprint ? 5.0 : 3.5;
+        const speed = this.player.sprint ? 5.5 : 3.8;
         const moveDistance = speed * deltaTime;
         
         const forward = new THREE.Vector3();
@@ -255,20 +285,59 @@ class Game {
         
         if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
+        
+        // Apply movement
         this.player.position.add(move);
         
-        // World boundaries
-        const boundary = this.gamePhase === 'basement' ? 7.5 : 24;
-        this.player.position.x = Math.max(-boundary, Math.min(boundary, this.player.position.x));
-        this.player.position.z = Math.max(-boundary, Math.min(boundary, this.player.position.z));
+        // Update physics
+        const bounds = this.gamePhase === 'basement' 
+            ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 }
+            : { minX: -55, maxX: 55, minZ: -55, maxZ: 55 };
+        this.player.updatePhysics(deltaTime, bounds);
         
         this.camera.position.copy(this.player.position);
+        
+        // Add camera bob when walking
+        if (move.length() > 0.01 && this.player.isGrounded) {
+            const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
+            this.camera.position.y = this.player.position.y + bobAmount;
+        } else {
+            this.camera.position.y = this.player.position.y;
+        }
         
         // Update monster AI
         if (this.gamePhase === 'island' && this.gameActive) {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) {
                 this.gameOver();
+            }
+            
+            // Update UI with monster distance
+            const distToMonster = this.player.position.distanceTo(this.monster.position);
+            const statusDiv = document.getElementById('status');
+            if (statusDiv) {
+                if (distToMonster < 8) {
+                    statusDiv.style.borderRightColor = '#ff0000';
+                    statusDiv.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                } else if (distToMonster < 15) {
+                    statusDiv.style.borderRightColor = '#ff6600';
+                } else {
+                    statusDiv.style.borderRightColor = '#ffaa44';
+                }
+            }
+        }
+        
+        // Update distance to exit (basement)
+        if (this.gamePhase === 'basement' && this.world.exitDoor) {
+            const distToDoor = this.player.position.distanceTo(this.world.exitDoor.position);
+            const distElem = document.getElementById('distance-indicator');
+            if (distElem) {
+                distElem.innerText = distToDoor.toFixed(1);
+                if (distToDoor < 2) {
+                    distElem.style.color = '#ffaa44';
+                } else {
+                    distElem.style.color = '#ffffff';
+                }
             }
         }
     }
@@ -307,9 +376,22 @@ class Game {
         this.gamePhase = 'basement';
         this.ui.hideMenu();
         this.player.position.set(0, 1.6, 0);
+        this.player.velocity.set(0, 0, 0);
         this.camera.position.copy(this.player.position);
         document.body.style.cursor = 'none';
         this.story.startGame();
+        
+        // Reset monster position if needed
+        this.monster.active = false;
+        this.monster.position.set(35, 0, 30);
+        this.monster.mesh.position.copy(this.monster.position);
+        
+        // Show controls hint
+        setTimeout(() => {
+            if (this.gameActive) {
+                this.ui.showMessage('Используйте WASD для движения, мышь для осмотра, Shift для бега, E для взаимодействия', 5000);
+            }
+        }, 1000);
     }
 }
 
