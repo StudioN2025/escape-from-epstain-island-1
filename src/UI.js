@@ -7,16 +7,31 @@ export class UIManager {
         this.menu = document.getElementById('menu-overlay');
         this.gameOverScreen = document.getElementById('game-over');
         this.winScreen = document.getElementById('win-screen');
+        
+        // Bind restart buttons
+        if (document.getElementById('retry-btn')) {
+            document.getElementById('retry-btn').onclick = () => location.reload();
+        }
+        if (document.getElementById('play-again')) {
+            document.getElementById('play-again').onclick = () => location.reload();
+        }
     }
     
     showMessage(text, duration = 3000) {
         if (!this.messageArea || !this.messageText) return;
         
+        // Remove existing animation
+        this.messageArea.style.animation = 'none';
+        this.messageArea.offsetHeight; // Trigger reflow
+        this.messageArea.style.animation = null;
+        
         this.messageText.textContent = text;
         this.messageArea.classList.remove('hidden');
         
         setTimeout(() => {
-            this.messageArea.classList.add('hidden');
+            if (this.messageArea) {
+                this.messageArea.classList.add('hidden');
+            }
         }, duration);
     }
     
@@ -28,7 +43,8 @@ export class UIManager {
     
     showPrompt(text) {
         if (this.prompt) {
-            document.getElementById('prompt-text').textContent = text;
+            const promptText = document.getElementById('prompt-text');
+            if (promptText) promptText.textContent = text;
             this.prompt.classList.remove('hidden');
         }
     }
@@ -54,14 +70,12 @@ export class UIManager {
     showGameOver() {
         if (this.gameOverScreen) {
             this.gameOverScreen.classList.remove('hidden');
-            document.getElementById('retry-btn').onclick = () => location.reload();
         }
     }
     
     showWinScreen() {
         if (this.winScreen) {
             this.winScreen.classList.remove('hidden');
-            document.getElementById('play-again').onclick = () => location.reload();
         }
     }
 }
