@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Побег с острова - Тайна подвала</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-ui">
+        <div id="crosshair"></div>
+        <div id="interaction-prompt" class="hidden">
+            <div class="prompt-content">
+                <span class="key-icon">🔑</span>
+                <span id="prompt-text">Нажмите E</span>
+            </div>
+        </div>
+        <div id="inventory">
+            <div class="inventory-slot">
+                <div class="slot-icon">📦</div>
+                <div class="slot-item" id="inventory-item"></div>
+            </div>
+        </div>
+        <div id="quest-log">
+            <h3>📜 Задание</h3>
+            <p id="quest-text">Найдите способ выбраться из подвала</p>
+        </div>
+        <div id="message-area" class="hidden">
+            <div id="message-text"></div>
+        </div>
+        <div id="mini-map">
+            <div id="map-canvas"></div>
+        </div>
+    </div>
+
+    <div id="menu-overlay" class="hidden">
+        <div class="menu-content">
+            <h1>🏝️ ПОБЕГ С ОСТРОВА 🏝️</h1>
+            <p>Вы проснулись в тёмном подвале. Что-то здесь не так...</p>
+            <button id="start-game">Начать игру</button>
+            <button id="restart-game">Перезапустить</button>
+        </div>
+    </div>
+
+    <div id="game-over" class="hidden">
+        <div class="game-over-content">
+            <h2>💀 ВАС СХВАТИЛИ 💀</h2>
+            <p>Монстр был быстрее...</p>
+            <button id="retry-btn">Попробовать снова</button>
+        </div>
+    </div>
+
+    <div id="win-screen" class="hidden">
+        <div class="win-content">
+            <h2>🎉 ПОБЕДА! 🎉</h2>
+            <p>Вы успешно сбежали с острова на лодке!</p>
+            <p>Монстр остался позади...</p>
+            <button id="play-again">Играть снова</button>
+        </div>
+    </div>
+
+    <div id="controls-hint">
+        🖱️ Мышь - осмотр | WASD - движение | E - взаимодействие | Shift - бег
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
