@@ -41,15 +41,20 @@ class Game {
         this.ui = new UIManager();
         this.story = new StoryManager(this.ui, this.inventory);
         
-        this.setupEventListeners();
-        this.setupInteraction();
+        // Set global reference for callbacks
+        window.gameInstance = this;
         
-        // Создаем мир (подвал)
+        this.setupEventListeners();
+        
+        // Create world
         await this.world.createBasement();
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
         this.animate();
         this.showMenu();
+        
+        // Start story
+        this.story.startGame();
     }
     
     setupRenderer() {
@@ -63,6 +68,7 @@ class Game {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
     }
     
@@ -72,21 +78,32 @@ class Game {
     
     setupLighting() {
         // Ambient light
-        const ambientLight = new THREE.AmbientLight(0x222222);
+        const ambientLight = new THREE.AmbientLight(0x332211);
         this.scene.add(ambientLight);
         
         // Main directional light
-        const mainLight = new THREE.DirectionalLight(0xffcc88, 1);
+        const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
         mainLight.position.set(10, 20, 5);
         mainLight.castShadow = true;
         mainLight.shadow.mapSize.width = 1024;
         mainLight.shadow.mapSize.height = 1024;
+        mainLight.shadow.camera.near = 0.5;
+        mainLight.shadow.camera.far = 50;
+        mainLight.shadow.camera.left = -10;
+        mainLight.shadow.camera.right = 10;
+        mainLight.shadow.camera.top = 10;
+        mainLight.shadow.camera.bottom = -10;
         this.scene.add(mainLight);
         
         // Fill light
-        const fillLight = new THREE.PointLight(0x4466cc, 0.3);
+        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
         fillLight.position.set(0, 5, 0);
         this.scene.add(fillLight);
+        
+        // Back rim light
+        const rimLight = new THREE.PointLight(0xffaa66, 0.2);
+        rimLight.position.set(-5, 3, -8);
+        this.scene.add(rimLight);
     }
     
     setupEventListeners() {
@@ -115,7 +132,7 @@ class Game {
             
             this.yaw -= this.mouseX;
             this.pitch -= this.mouseY;
-            this.pitch = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, this.pitch));
+            this.pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, this.pitch));
             
             this.camera.rotation.order = 'YXZ';
             this.camera.rotation.y = this.yaw;
@@ -127,20 +144,34 @@ class Game {
                 document.body.style.cursor = 'none';
             }
         });
-    }
-    
-    setupInteraction() {
-        this.raycaster = new THREE.Raycaster();
-        this.interactDistance = 2.5;
+        
+        // Lock pointer on click
+        this.renderer.domElement.addEventListener('click', () => {
+            if (this.gameActive) {
+                this.renderer.domElement.requestPointerLock();
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', lockChange);
+        document.addEventListener('mozpointerlockchange', lockChange);
+        
+        const lockChange = () => {
+            if (document.pointerLockElement === this.renderer.domElement) {
+                document.body.style.cursor = 'none';
+            } else {
+                document.body.style.cursor = 'auto';
+            }
+        };
     }
     
     checkInteraction() {
         if (!this.gameActive) return;
         
+        const raycaster = new THREE.Raycaster();
         const center = new THREE.Vector2(0, 0);
-        this.raycaster.setFromCamera(center, this.camera);
+        raycaster.setFromCamera(center, this.camera);
         
-        const intersects = this.raycaster.intersectObjects(this.world.interactiveObjects);
+        const intersects = raycaster.intersectObjects(this.world.interactiveObjects);
         
         if (intersects.length > 0) {
             const obj = intersects[0].object;
@@ -154,7 +185,7 @@ class Game {
         switch(type) {
             case 'key':
                 this.inventory.addItem('key', '🔑');
-                this.story.addQuest('find_boat', 'Найдите лодку на острове и сбегите от монстра');
+                this.story.completeQuest('find_key');
                 this.ui.showMessage('Вы нашли ржавый ключ! Похоже, он открывает дверь наверх...', 3000);
                 this.world.showExitDoor();
                 break;
@@ -179,7 +210,8 @@ class Game {
             this.gamePhase = 'island';
             this.world.createIsland();
             this.monster.activate();
-            this.story.addQuest('find_boat', 'Найдите лодку на острове и сбегите от монстра');
+            this.story.completeQuest('escape_basement');
+            this.story.addQuest('find_boat', '🛶 Найдите лодку на острове и сбегите от монстра');
             this.ui.updateQuest('Найдите лодку на острове и сбегите от монстра! Он уже близко...');
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
@@ -189,11 +221,13 @@ class Game {
     winGame() {
         this.gameActive = false;
         this.ui.showWinScreen();
+        document.exitPointerLock();
     }
     
     gameOver() {
         this.gameActive = false;
         this.ui.showGameOver();
+        document.exitPointerLock();
     }
     
     updateMovement(deltaTime) {
@@ -214,11 +248,12 @@ class Game {
         if (this.keys['KeyD']) move.add(right);
         if (this.keys['KeyA']) move.sub(right);
         
+        if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
         this.player.position.add(move);
         
         // World boundaries
-        const boundary = this.gamePhase === 'basement' ? 8 : 25;
+        const boundary = this.gamePhase === 'basement' ? 7.5 : 24;
         this.player.position.x = Math.max(-boundary, Math.min(boundary, this.player.position.x));
         this.player.position.z = Math.max(-boundary, Math.min(boundary, this.player.position.z));
         
@@ -247,12 +282,19 @@ class Game {
     showMenu() {
         this.gameActive = false;
         this.ui.showMenu();
-        document.getElementById('start-game').onclick = () => {
-            this.startGame();
-        };
-        document.getElementById('restart-game').onclick = () => {
-            location.reload();
-        };
+        const startBtn = document.getElementById('start-game');
+        const restartBtn = document.getElementById('restart-game');
+        
+        if (startBtn) {
+            startBtn.onclick = () => {
+                this.startGame();
+            };
+        }
+        if (restartBtn) {
+            restartBtn.onclick = () => {
+                location.reload();
+            };
+        }
     }
     
     startGame() {
@@ -262,6 +304,7 @@ class Game {
         this.player.position.set(0, 1.6, 0);
         this.camera.position.copy(this.player.position);
         document.body.style.cursor = 'none';
+        this.story.startGame();
     }
 }
 
