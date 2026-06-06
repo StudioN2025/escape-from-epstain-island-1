@@ -28,8 +28,9 @@ class Game {
         this.gameActive = false;
         this.gamePhase = 'basement';
         this.raycaster = new THREE.Raycaster();
-        this.fbxMixer = null; // Для анимаций FBX
-        this.fbxModel = null;  // FBX модель монстра
+        this.fbxMixer = null;
+        this.fbxModel = null;
+        this.pointerLocked = false;
         
         this.init();
     }
@@ -52,7 +53,7 @@ class Game {
         await this.world.createBasement();
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        // Пытаемся загрузить FBX модель монстра
+        // Загружаем FBX модель монстра
         await this.loadMonsterFBX();
         
         this.animate();
@@ -63,12 +64,11 @@ class Game {
     
     async loadMonsterFBX() {
         const loader = new FBXLoader();
-        // Путь к FBX файлу - поместите ваш monster.fbx в папку assets/models/
         const fbxPath = 'assets/models/monster.fbx';
         
         return new Promise((resolve) => {
             loader.load(fbxPath, (fbx) => {
-                console.log('FBX модель монстра успешно загружена!');
+                console.log('✅ FBX модель монстра успешно загружена!');
                 this.fbxModel = fbx;
                 
                 // Удаляем стандартную модель монстра
@@ -77,7 +77,7 @@ class Game {
                 }
                 
                 // Настраиваем FBX модель
-                fbx.scale.setScalar(0.02); // Масштабируем (подберите под вашу модель)
+                fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = true;
                 fbx.receiveShadow = true;
@@ -85,14 +85,14 @@ class Game {
                 // Создаем анимационный микшер
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 
-                // Воспроизводим первую анимацию (если есть)
+                // Воспроизводим анимацию
                 if (fbx.animations && fbx.animations.length > 0) {
-                    console.log(`Найдено ${fbx.animations.length} анимаций`);
+                    console.log(`🎬 Найдено ${fbx.animations.length} анимаций`);
                     const action = this.fbxMixer.clipAction(fbx.animations[0]);
                     action.play();
-                    console.log('Анимация запущена');
+                    console.log('🎬 Анимация запущена');
                 } else {
-                    console.log('Анимаций в FBX не найдено');
+                    console.log('⚠️ Анимаций в FBX не найдено');
                 }
                 
                 this.scene.add(fbx);
@@ -102,7 +102,7 @@ class Game {
                 
                 resolve(true);
             }, undefined, (error) => {
-                console.warn('Не удалось загрузить FBX модель, используется стандартная:', error);
+                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная:', error);
                 resolve(false);
             });
         });
@@ -181,7 +181,7 @@ class Game {
         });
         
         document.addEventListener('mousemove', (e) => {
-            if (!this.gameActive) return;
+            if (!this.gameActive || !this.pointerLocked) return;
             
             this.mouseX = e.movementX * 0.002;
             this.mouseY = e.movementY * 0.002;
@@ -195,23 +195,26 @@ class Game {
             this.camera.rotation.x = this.pitch;
         });
         
-        document.addEventListener('click', () => {
-            if (this.gameActive) {
-                document.body.style.cursor = 'none';
-            }
-        });
-        
+        // Исправленный pointer lock
         this.renderer.domElement.addEventListener('click', () => {
-            if (this.gameActive) {
-                this.renderer.domElement.requestPointerLock();
+            if (this.gameActive && this.renderer.domElement) {
+                try {
+                    this.renderer.domElement.requestPointerLock();
+                } catch (e) {
+                    console.log('Pointer lock не поддерживается');
+                }
             }
         });
         
         const lockChange = () => {
             if (document.pointerLockElement === this.renderer.domElement) {
+                this.pointerLocked = true;
                 document.body.style.cursor = 'none';
+                console.log('🔒 Управление мышью активировано');
             } else {
+                this.pointerLocked = false;
                 document.body.style.cursor = 'auto';
+                console.log('🔓 Управление мышью деактивировано');
             }
         };
         
@@ -251,14 +254,14 @@ class Game {
             case 'key':
                 this.inventory.addItem('key', '🔑');
                 this.story.completeQuest('find_key');
-                this.ui.showMessage('Вы нашли ржавый ключ! Похоже, он открывает дверь наверх...', 3000);
+                this.ui.showMessage('🔑 Вы нашли ржавый ключ! Похоже, он открывает дверь наверх...', 3000);
                 this.world.showExitDoor();
                 break;
             case 'door':
                 if (this.inventory.hasItem('key')) {
                     this.transitionToIsland();
                 } else {
-                    this.ui.showMessage('Дверь заперта. Нужно найти ключ!', 2000);
+                    this.ui.showMessage('🔒 Дверь заперта. Нужно найти ключ!', 2000);
                 }
                 break;
             case 'boat':
@@ -270,14 +273,14 @@ class Game {
     }
     
     transitionToIsland() {
-        this.ui.showMessage('Дверь открывается! Вы выходите на поверхность...', 2000);
+        this.ui.showMessage('🚪 Дверь открывается! Вы выходите на поверхность...', 2000);
         setTimeout(() => {
             this.gamePhase = 'island';
             this.world.createIsland();
             this.monster.activate();
             this.story.completeQuest('escape_basement');
             this.story.addQuest('find_boat', '🛶 Найдите лодку на острове и сбегите от монстра');
-            this.ui.updateQuest('Найдите лодку на острове и сбегите от монстра! Он уже далеко, но услышал вас...');
+            this.ui.updateQuest('🛶 Найдите лодку на острове и сбегите от монстра! Он уже далеко, но услышал вас...');
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             
@@ -318,7 +321,6 @@ class Game {
         
         let move = new THREE.Vector3(0, 0, 0);
         
-        // Правильное управление: W = вперед, S = назад, A = влево, D = вправо
         if (this.keys['KeyW']) move.add(forward);
         if (this.keys['KeyS']) move.sub(forward);
         if (this.keys['KeyA']) move.sub(right);
@@ -343,7 +345,6 @@ class Game {
             this.camera.position.y = this.player.position.y;
         }
         
-        // Обновляем монстра
         if (this.gamePhase === 'island' && this.gameActive) {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) {
@@ -388,7 +389,6 @@ class Game {
         
         const deltaTime = Math.min(0.033, 1/60);
         
-        // Обновляем анимации FBX
         if (this.fbxMixer) {
             this.fbxMixer.update(deltaTime);
         }
@@ -425,7 +425,6 @@ class Game {
         this.player.position.set(0, 1.6, 0);
         this.player.velocity.set(0, 0, 0);
         this.camera.position.copy(this.player.position);
-        document.body.style.cursor = 'none';
         this.story.startGame();
         
         this.monster.active = false;
@@ -436,7 +435,7 @@ class Game {
         
         setTimeout(() => {
             if (this.gameActive) {
-                this.ui.showMessage('Используйте WASD для движения, мышь для осмотра, Shift для бега, Пробел для прыжка, E для взаимодействия', 5000);
+                this.ui.showMessage('🎮 Используйте WASD для движения, мышь для осмотра, Shift для бега, Пробел для прыжка, E для взаимодействия', 5000);
             }
         }, 1000);
     }
