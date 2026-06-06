@@ -12,18 +12,22 @@ export class StoryManager {
     
     startGame() {
         this.addQuest('find_key', '🔑 Найдите ключ от двери в подвале');
-        this.ui.updateQuest('Осмотрите подвал, возможно ключ где-то здесь...');
+        if (this.ui) {
+            this.ui.updateQuest('Осмотрите подвал, возможно ключ где-то здесь...');
+        }
     }
     
     addQuest(questId, description) {
         this.currentQuest = questId;
-        this.ui.updateQuest(this.quests[questId] || description);
+        if (this.ui) {
+            this.ui.updateQuest(this.quests[questId] || description);
+        }
     }
     
     completeQuest(questId) {
         if (this.currentQuest === questId) {
             const nextQuest = this.getNextQuest(questId);
-            if (nextQuest) {
+            if (nextQuest && this.ui) {
                 this.addQuest(nextQuest.id, nextQuest.description);
             }
         }
