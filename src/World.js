@@ -5,6 +5,7 @@ export class World {
         this.scene = scene;
         this.interactiveObjects = [];
         this.objects = [];
+        this.exitDoor = null;
     }
     
     async createBasement() {
@@ -32,7 +33,7 @@ export class World {
             this.scene.add(mesh);
         });
         
-        // Ceiling with bars
+        // Ceiling with bars effect
         const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x2a2218, roughness: 0.9 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
@@ -58,6 +59,9 @@ export class World {
         
         // Decorative elements
         this.addBarrels();
+        
+        // Add some torches for atmosphere
+        this.addTorches();
     }
     
     addBarrels() {
@@ -68,6 +72,23 @@ export class World {
             barrel.position.set(pos[0], pos[1], pos[2]);
             barrel.castShadow = true;
             this.scene.add(barrel);
+        });
+    }
+    
+    addTorches() {
+        const torchMat = new THREE.MeshStandardMaterial({ color: 0xaa6633 });
+        const lightColor = 0xff6633;
+        
+        const torchPositions = [[-6, 1, -5], [6, 1, -5], [-6, 1, 5], [6, 1, 5]];
+        torchPositions.forEach(pos => {
+            const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.2, 6), torchMat);
+            torch.position.set(pos[0], pos[1], pos[2]);
+            torch.castShadow = true;
+            this.scene.add(torch);
+            
+            const light = new THREE.PointLight(lightColor, 0.5, 8);
+            light.position.set(pos[0], pos[1] + 0.5, pos[2]);
+            this.scene.add(light);
         });
     }
     
@@ -86,8 +107,10 @@ export class World {
         // Add floating effect for key
         const animateKey = () => {
             requestAnimationFrame(animateKey);
-            keyMesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.1;
-            keyMesh.rotation.y += 0.02;
+            if (keyMesh.parent) {
+                keyMesh.position.y = 0.5 + Math.sin(Date.now() * 0.003) * 0.1;
+                keyMesh.rotation.y += 0.02;
+            }
         };
         animateKey();
     }
@@ -96,7 +119,7 @@ export class World {
         // Make door glow and interactive
         this.exitDoor.userData = {
             onInteract: () => {
-                if (window.gameInstance) {
+                if (window.gameInstance && window.gameInstance.handleInteraction) {
                     window.gameInstance.handleInteraction('door');
                 }
             }
@@ -110,8 +133,12 @@ export class World {
     }
     
     createIsland() {
-        // Clear basement objects
+        // Clear basement objects (but keep lights)
         this.clearScene();
+        
+        // Sky background
+        this.scene.background = new THREE.Color(0x1a4d8c);
+        this.scene.fog = new THREE.FogExp2(0x1a4d8c, 0.008);
         
         // Ground
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
@@ -120,6 +147,17 @@ export class World {
         ground.position.y = -0.5;
         ground.receiveShadow = true;
         this.scene.add(ground);
+        
+        // Add grass patches
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2a });
+        for (let i = 0; i < 300; i++) {
+            const grass = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.2, 3), grassMat);
+            const x = (Math.random() - 0.5) * 44;
+            const z = (Math.random() - 0.5) * 44;
+            grass.position.set(x, -0.4, z);
+            grass.castShadow = true;
+            this.scene.add(grass);
+        }
         
         // Trees
         this.addTrees();
@@ -131,7 +169,7 @@ export class World {
         boat.castShadow = true;
         boat.userData = {
             onInteract: () => {
-                if (window.gameInstance) {
+                if (window.gameInstance && window.gameInstance.handleInteraction) {
                     window.gameInstance.handleInteraction('boat');
                 }
             }
@@ -139,22 +177,32 @@ export class World {
         this.scene.add(boat);
         this.interactiveObjects.push(boat);
         
+        // Add mast to boat
+        const mastMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 1.5, 6), mastMat);
+        mast.position.set(0, 0.8, 0);
+        boat.add(mast);
+        
         // Water around island
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366aa, metalness: 0.8, roughness: 0.2 });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366aa, metalness: 0.8, roughness: 0.2, transparent: true, opacity: 0.9 });
         const water = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), waterMat);
         water.rotation.x = -Math.PI / 2;
         water.position.y = -0.8;
+        water.receiveShadow = true;
         this.scene.add(water);
         
         // Add campfire
         this.addCampfire();
+        
+        // Add rocks
+        this.addRocks();
     }
     
     addTrees() {
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
         
-        const treePositions = [[-12, -0.5, -10], [10, -0.5, -12], [-8, -0.5, 12], [15, -0.5, 5], [-15, -0.5, 8]];
+        const treePositions = [[-12, -0.5, -10], [10, -0.5, -12], [-8, -0.5, 12], [15, -0.5, 5], [-15, -0.5, 8], [-5, -0.5, -15], [5, -0.5, -14]];
         
         treePositions.forEach(pos => {
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.8, 1.5, 6), trunkMat);
@@ -176,15 +224,52 @@ export class World {
     }
     
     addCampfire() {
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3a });
         const fireMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
-        const fire = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 0.3, 8), fireMat);
-        fire.position.set(-5, 0, 8);
+        
+        // Logs
+        const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.8, 6), logMat);
+        log1.rotation.z = Math.PI / 2;
+        log1.position.set(-5.2, 0, 8);
+        this.scene.add(log1);
+        
+        const log2 = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.8, 6), logMat);
+        log2.rotation.x = Math.PI / 2;
+        log2.position.set(-4.8, 0, 8);
+        this.scene.add(log2);
+        
+        const fire = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.2, 8), fireMat);
+        fire.position.set(-5, 0.1, 8);
         fire.castShadow = true;
         this.scene.add(fire);
         
-        const light = new THREE.PointLight(0xff4400, 0.8, 10);
+        const light = new THREE.PointLight(0xff4400, 0.8, 12);
         light.position.set(-5, 0.5, 8);
         this.scene.add(light);
+        
+        // Animate fire
+        const animateFire = () => {
+            requestAnimationFrame(animateFire);
+            if (fire.parent) {
+                const intensity = 0.6 + Math.sin(Date.now() * 0.01) * 0.3;
+                light.intensity = intensity;
+                fire.scale.setScalar(1 + Math.sin(Date.now() * 0.015) * 0.1);
+            }
+        };
+        animateFire();
+    }
+    
+    addRocks() {
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a });
+        const rockPositions = [[18, -0.4, 12], [-18, -0.4, -15], [16, -0.4, -10], [-14, -0.4, 16]];
+        
+        rockPositions.forEach(pos => {
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.4), rockMat);
+            rock.position.set(pos[0], pos[1], pos[2]);
+            rock.scale.setScalar(0.8 + Math.random() * 0.5);
+            rock.castShadow = true;
+            this.scene.add(rock);
+        });
     }
     
     clearScene() {
