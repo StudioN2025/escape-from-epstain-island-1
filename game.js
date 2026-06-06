@@ -31,34 +31,77 @@ class Game {
         this.fbxMixer = null;
         this.fbxModel = null;
         this.pointerLocked = false;
+        this.loadingProgress = 0;
         
         this.init();
     }
     
+    updateLoadingProgress(percent, status) {
+        this.loadingProgress = percent;
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingPercent = document.getElementById('loading-percent');
+        const loadingStatus = document.getElementById('loading-status');
+        
+        if (loadingBar) loadingBar.style.width = percent + '%';
+        if (loadingPercent) loadingPercent.innerText = percent + '%';
+        if (loadingStatus) loadingStatus.innerText = status;
+    }
+    
     async init() {
+        this.updateLoadingProgress(5, 'Инициализация рендерера...');
         this.setupRenderer();
+        
+        this.updateLoadingProgress(15, 'Создание мира...');
         this.setupWorld();
+        
+        this.updateLoadingProgress(25, 'Настройка освещения...');
         this.setupLighting();
         
+        this.updateLoadingProgress(35, 'Загрузка игрока...');
         this.player = new Player(this.camera);
+        
+        this.updateLoadingProgress(45, 'Загрузка монстра...');
         this.monster = new Monster(this.scene);
+        
+        this.updateLoadingProgress(55, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
+        
+        this.updateLoadingProgress(60, 'Загрузка интерфейса...');
         this.ui = new UIManager();
+        
+        this.updateLoadingProgress(65, 'Загрузка сюжета...');
         this.story = new StoryManager(this.ui, this.inventory);
         
         window.gameInstance = this;
         
+        this.updateLoadingProgress(70, 'Настройка управления...');
         this.setupEventListeners();
         
+        this.updateLoadingProgress(75, 'Создание подвала...');
         await this.world.createBasement();
+        
+        this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
         // Загружаем FBX модель монстра
+        this.updateLoadingProgress(90, 'Загрузка 3D модели монстра...');
         await this.loadMonsterFBX();
         
-        this.animate();
-        this.showMenu();
+        this.updateLoadingProgress(100, 'Готово!');
         
+        // Скрываем экран загрузки и показываем меню
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    this.showMenu();
+                }, 500);
+            }
+        }, 500);
+        
+        this.animate();
         this.story.startGame();
     }
     
@@ -67,25 +110,28 @@ class Game {
         const fbxPath = 'assets/models/monster.fbx';
         
         return new Promise((resolve) => {
+            // Таймаут на случай очень долгой загрузки
+            const timeout = setTimeout(() => {
+                console.warn('⚠️ Таймаут загрузки FBX, используем стандартную модель');
+                resolve(false);
+            }, 10000);
+            
             loader.load(fbxPath, (fbx) => {
+                clearTimeout(timeout);
                 console.log('✅ FBX модель монстра успешно загружена!');
                 this.fbxModel = fbx;
                 
-                // Удаляем стандартную модель монстра
                 if (this.monster.mesh) {
                     this.scene.remove(this.monster.mesh);
                 }
                 
-                // Настраиваем FBX модель
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = true;
                 fbx.receiveShadow = true;
                 
-                // Создаем анимационный микшер
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 
-                // Воспроизводим анимацию
                 if (fbx.animations && fbx.animations.length > 0) {
                     console.log(`🎬 Найдено ${fbx.animations.length} анимаций`);
                     const action = this.fbxMixer.clipAction(fbx.animations[0]);
@@ -101,7 +147,12 @@ class Game {
                 this.monster.mixer = this.fbxMixer;
                 
                 resolve(true);
-            }, undefined, (error) => {
+            }, (xhr) => {
+                // Прогресс загрузки
+                const percent = Math.floor((xhr.loaded / xhr.total) * 100);
+                this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
+            }, (error) => {
+                clearTimeout(timeout);
                 console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная:', error);
                 resolve(false);
             });
@@ -195,7 +246,6 @@ class Game {
             this.camera.rotation.x = this.pitch;
         });
         
-        // Исправленный pointer lock
         this.renderer.domElement.addEventListener('click', () => {
             if (this.gameActive && this.renderer.domElement) {
                 try {
@@ -210,11 +260,9 @@ class Game {
             if (document.pointerLockElement === this.renderer.domElement) {
                 this.pointerLocked = true;
                 document.body.style.cursor = 'none';
-                console.log('🔒 Управление мышью активировано');
             } else {
                 this.pointerLocked = false;
                 document.body.style.cursor = 'auto';
-                console.log('🔓 Управление мышью деактивировано');
             }
         };
         
@@ -298,6 +346,8 @@ class Game {
         if (document.exitPointerLock) {
             document.exitPointerLock();
         }
+        const gameUI = document.getElementById('game-ui');
+        if (gameUI) gameUI.classList.add('hidden');
     }
     
     gameOver() {
@@ -306,6 +356,8 @@ class Game {
         if (document.exitPointerLock) {
             document.exitPointerLock();
         }
+        const gameUI = document.getElementById('game-ui');
+        if (gameUI) gameUI.classList.add('hidden');
     }
     
     updateMovement(deltaTime) {
@@ -403,6 +455,9 @@ class Game {
     showMenu() {
         this.gameActive = false;
         this.ui.showMenu();
+        const gameUI = document.getElementById('game-ui');
+        if (gameUI) gameUI.classList.add('hidden');
+        
         const startBtn = document.getElementById('start-game');
         const restartBtn = document.getElementById('restart-game');
         
@@ -422,6 +477,9 @@ class Game {
         this.gameActive = true;
         this.gamePhase = 'basement';
         this.ui.hideMenu();
+        const gameUI = document.getElementById('game-ui');
+        if (gameUI) gameUI.classList.remove('hidden');
+        
         this.player.position.set(0, 1.6, 0);
         this.player.velocity.set(0, 0, 0);
         this.camera.position.copy(this.player.position);
