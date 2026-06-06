@@ -31,6 +31,15 @@ export class Monster {
         this.mesh.add(leftEye);
         this.mesh.add(rightEye);
         
+        // Add horns
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0xccccaa });
+        const leftHorn = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 6), hornMat);
+        const rightHorn = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 6), hornMat);
+        leftHorn.position.set(-0.3, 0.65, 0.4);
+        rightHorn.position.set(0.3, 0.65, 0.4);
+        this.mesh.add(leftHorn);
+        this.mesh.add(rightHorn);
+        
         this.scene.add(this.mesh);
     }
     
@@ -65,6 +74,10 @@ export class Monster {
             const time = Date.now() * 0.008;
             this.mesh.position.y = Math.sin(time) * 0.1;
             this.mesh.scale.setScalar(1 + Math.sin(time * 2) * 0.05);
+            
+            // Rotate to face player
+            const angle = Math.atan2(direction.x, direction.z);
+            this.mesh.rotation.y = angle;
         }
         
         return false;
