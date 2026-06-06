@@ -83,7 +83,7 @@ class Game {
         this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        // Загружаем FBX модель монстра (без таймаута)
+        // Загружаем FBX модель монстра
         this.updateLoadingProgress(90, 'Загрузка 3D модели монстра...');
         await this.loadMonsterFBX();
         
@@ -110,20 +110,22 @@ class Game {
         const fbxPath = 'assets/models/monster.fbx';
         
         return new Promise((resolve) => {
+            // Пробуем загрузить FBX
             loader.load(fbxPath, (fbx) => {
                 console.log('✅ FBX модель монстра успешно загружена!');
-                this.fbxModel = fbx;
                 
+                // Удаляем стандартную модель
                 if (this.monster.mesh) {
                     this.scene.remove(this.monster.mesh);
                 }
                 
-                // Настраиваем масштаб (подберите под вашу модель)
+                // Настраиваем FBX модель
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = true;
                 fbx.receiveShadow = true;
                 
+                // Создаем анимационный микшер
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 
                 if (fbx.animations && fbx.animations.length > 0) {
@@ -148,8 +150,9 @@ class Game {
                     this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
                 }
             }, (error) => {
-                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная:', error.message);
+                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная');
                 console.log('💡 Поместите файл monster.fbx в папку assets/models/');
+                console.log('💡 Стандартная модель монстра уже создана и работает');
                 resolve(false);
             });
         });
@@ -256,9 +259,11 @@ class Game {
             if (document.pointerLockElement === this.renderer.domElement) {
                 this.pointerLocked = true;
                 document.body.style.cursor = 'none';
+                console.log('🔒 Управление мышью активировано');
             } else {
                 this.pointerLocked = false;
                 document.body.style.cursor = 'auto';
+                console.log('🔓 Управление мышью деактивировано');
             }
         };
         
@@ -467,6 +472,21 @@ class Game {
                 location.reload();
             };
         }
+        
+        // Также настраиваем кнопки на экранах победы/поражения
+        const retryBtn = document.getElementById('retry-btn');
+        if (retryBtn) {
+            retryBtn.onclick = () => {
+                location.reload();
+            };
+        }
+        
+        const playAgainBtn = document.getElementById('play-again');
+        if (playAgainBtn) {
+            playAgainBtn.onclick = () => {
+                location.reload();
+            };
+        }
     }
     
     startGame() {
@@ -495,4 +515,15 @@ class Game {
     }
 }
 
+// Создаем экземпляр игры
 const game = new Game();
+
+// Проверка создания монстра
+setTimeout(() => {
+    if (game.monster && game.monster.mesh) {
+        console.log('✅ Монстр успешно создан и виден в сцене');
+        console.log('📍 Позиция монстра:', game.monster.position);
+    } else {
+        console.error('❌ Монстр не создан!');
+    }
+}, 2000);
