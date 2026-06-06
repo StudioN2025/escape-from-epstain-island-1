@@ -1,0 +1,233 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+}
+
+#game-ui {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+#interaction-prompt {
+    position: absolute;
+    bottom: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border-left: 4px solid #ffaa00;
+    pointer-events: none;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+}
+
+.prompt-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.key-icon {
+    font-size: 20px;
+}
+
+#inventory {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 12px;
+    padding: 10px;
+    backdrop-filter: blur(5px);
+    border: 1px solid #ffaa44;
+}
+
+.inventory-slot {
+    width: 60px;
+    height: 60px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.slot-icon {
+    font-size: 30px;
+    opacity: 0.5;
+}
+
+.slot-item {
+    font-size: 40px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#quest-log {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(0,0,0,0.7);
+    padding: 12px 20px;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    border-left: 3px solid #ffaa44;
+    max-width: 250px;
+}
+
+#quest-log h3 {
+    color: #ffaa44;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+#quest-text {
+    color: white;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+#message-area {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #ffaa44;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-align: center;
+    animation: fadeOut 3s forwards;
+    pointer-events: none;
+    z-index: 20;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+}
+
+#mini-map {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 150px;
+    height: 150px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 8px;
+    border: 2px solid #ffaa44;
+    pointer-events: none;
+}
+
+#map-canvas {
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+}
+
+#controls-hint {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #aaa;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-family: monospace;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.menu-content, .game-over-content, .win-content {
+    background: rgba(0,0,0,0.9);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    border: 2px solid #ffaa44;
+    min-width: 300px;
+}
+
+.menu-content h1, .win-content h2 {
+    color: #ffaa44;
+    margin-bottom: 20px;
+}
+
+.menu-content p, .game-over-content p {
+    color: white;
+    margin-bottom: 30px;
+}
+
+button {
+    background: #ffaa44;
+    color: #1a1a1a;
+    border: none;
+    padding: 10px 30px;
+    margin: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: monospace;
+    transition: transform 0.2s;
+}
+
+button:hover {
+    transform: scale(1.05);
+    background: #ffcc66;
+}
+
+#menu-overlay, #game-over, #win-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    backdrop-filter: blur(5px);
+}
+
+.hidden {
+    display: none !important;
+}
