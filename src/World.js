@@ -8,14 +8,12 @@ export class World {
         this.exitDoor = null;
         this.waterPlane = null;
         this.boundaryWalls = [];
-        this.basementObjects = []; // Массив для хранения объектов подвала
+        this.basementObjects = [];
     }
     
     async createBasement() {
-        // Очищаем предыдущие объекты подвала
         this.clearBasement();
         
-        // Floor with texture-like appearance
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8, side: THREE.DoubleSide });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -24,13 +22,11 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Grid helper for floor (better visual)
         const gridHelper = new THREE.GridHelper(20, 20, 0x886644, 0x664422);
         gridHelper.position.y = -0.4;
         this.scene.add(gridHelper);
         this.basementObjects.push(gridHelper);
         
-        // Walls
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.6 });
         const walls = [
             { pos: [0, 1.5, -9.5], scale: [20, 3, 0.5] },
@@ -47,14 +43,12 @@ export class World {
             this.basementObjects.push(mesh);
         });
         
-        // Ceiling with wooden beams
         const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x2a2218, roughness: 0.9 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 20), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
-        // Wooden beams on ceiling
         const beamMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         for (let x = -7; x <= 7; x += 3.5) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 18), beamMat);
@@ -63,7 +57,6 @@ export class World {
             this.basementObjects.push(beam);
         }
         
-        // Add some pillars
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a });
         for (let x = -6; x <= 6; x += 6) {
             for (let z = -6; z <= 6; z += 6) {
@@ -75,7 +68,6 @@ export class World {
             }
         }
         
-        // Create exit door (locked)
         const doorMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
         this.exitDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), doorMat);
         this.exitDoor.position.set(8, 0, -9.4);
@@ -83,7 +75,6 @@ export class World {
         this.scene.add(this.exitDoor);
         this.basementObjects.push(this.exitDoor);
         
-        // Door frame
         const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
         const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
         frameLeft.position.set(7.4, 1.1, -9.4);
@@ -96,7 +87,6 @@ export class World {
         this.scene.add(frameTop);
         this.basementObjects.push(frameLeft, frameRight, frameTop);
         
-        // Decorative elements
         this.addBarrels();
         this.addTorches();
     }
@@ -125,7 +115,6 @@ export class World {
             this.scene.add(torch);
             this.basementObjects.push(torch);
             
-            // Torch flame
             const flameMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
             const flame = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 6), flameMat);
             flame.position.set(pos[0], pos[1] + 0.7, pos[2]);
@@ -140,7 +129,6 @@ export class World {
     }
     
     createInteractiveObjects(interactCallback) {
-        // Beautiful key on a pedestal
         const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
@@ -148,10 +136,8 @@ export class World {
         this.scene.add(pedestal);
         this.basementObjects.push(pedestal);
         
-        // Key group
         const keyGroup = new THREE.Group();
         
-        // Key handle (ring)
         const ringGeo = new THREE.TorusGeometry(0.18, 0.05, 16, 32);
         const keyMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, metalness: 0.9, roughness: 0.2, emissive: 0x442200 });
         const ring = new THREE.Mesh(ringGeo, keyMat);
@@ -159,13 +145,11 @@ export class World {
         ring.rotation.z = Math.PI / 4;
         keyGroup.add(ring);
         
-        // Key shaft
         const shaftGeo = new THREE.BoxGeometry(0.08, 0.08, 0.35);
         const shaft = new THREE.Mesh(shaftGeo, keyMat);
         shaft.position.set(0.25, 0, 0);
         keyGroup.add(shaft);
         
-        // Key teeth
         const toothGeo = new THREE.BoxGeometry(0.08, 0.12, 0.08);
         const tooth1 = new THREE.Mesh(toothGeo, keyMat);
         tooth1.position.set(0.45, -0.05, 0);
@@ -184,13 +168,11 @@ export class World {
         };
         this.interactiveObjects.push(keyGroup);
         
-        // Add glowing effect around key
         const glowLight = new THREE.PointLight(0xffaa44, 0.5, 3);
         glowLight.position.set(-3, 0.2, 4);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
         
-        // Animate key floating and rotating
         const animateKey = () => {
             requestAnimationFrame(animateKey);
             if (keyGroup.parent) {
@@ -204,7 +186,6 @@ export class World {
     }
     
     showExitDoor() {
-        // Make door glow and interactive
         this.exitDoor.userData = {
             onInteract: () => {
                 if (window.gameInstance && window.gameInstance.handleInteraction) {
@@ -214,13 +195,11 @@ export class World {
         };
         this.interactiveObjects.push(this.exitDoor);
         
-        // Add glow effect
         const glowLight = new THREE.PointLight(0xffaa44, 0.8, 5);
         glowLight.position.copy(this.exitDoor.position);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
         
-        // Animate glow
         const animateGlow = () => {
             requestAnimationFrame(animateGlow);
             if (glowLight.parent) {
@@ -231,7 +210,6 @@ export class World {
     }
     
     clearBasement() {
-        // Удаляем все объекты подвала из сцены
         this.basementObjects.forEach(obj => {
             if (obj && obj.parent) {
                 this.scene.remove(obj);
@@ -243,14 +221,11 @@ export class World {
     }
     
     createIsland() {
-        // Полностью очищаем подвал перед созданием острова
         this.clearBasement();
         
-        // Sky background
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
         
-        // Large island ground
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -259,7 +234,6 @@ export class World {
         this.scene.add(ground);
         this.objects.push(ground);
         
-        // Sand around the edges
         const sandMat = new THREE.MeshStandardMaterial({ color: 0xddbb77, roughness: 0.8 });
         const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
         sandRing.rotation.x = -Math.PI / 2;
@@ -268,7 +242,6 @@ export class World {
         this.scene.add(sandRing);
         this.objects.push(sandRing);
         
-        // Add varied terrain (small hills)
         const hillMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2a });
         for (let i = 0; i < 60; i++) {
             const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.4, 8), hillMat);
@@ -282,30 +255,25 @@ export class World {
             this.objects.push(hill);
         }
         
-        // Add many trees
         this.addTrees();
         
-        // Boat (escape object) - placed at the beach
         const boatGroup = new THREE.Group();
         const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
         const boatBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 4), boatMat);
         boatBody.castShadow = true;
         boatGroup.add(boatBody);
         
-        // Boat front
         const boatFront = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1, 4), boatMat);
         boatFront.rotation.x = Math.PI / 2;
         boatFront.position.set(0, 0.2, 1.8);
         boatFront.castShadow = true;
         boatGroup.add(boatFront);
         
-        // Mast
         const mastMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 2, 6), mastMat);
         mast.position.set(0, 1.2, 0);
         boatGroup.add(mast);
         
-        // Sail
         const sailMat = new THREE.MeshStandardMaterial({ color: 0xeeddcc });
         const sail = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), sailMat);
         sail.position.set(0, 1.5, 0.1);
@@ -326,7 +294,6 @@ export class World {
         };
         this.interactiveObjects.push(boatGroup);
         
-        // Water around island
         const waterMat = new THREE.MeshStandardMaterial({ 
             color: 0x3366aa, 
             metalness: 0.9, 
@@ -341,77 +308,60 @@ export class World {
         this.scene.add(this.waterPlane);
         this.objects.push(this.waterPlane);
         
-        // Create invisible boundary walls to prevent falling off
         const boundarySize = 48;
         const boundaryHeight = 5;
-        const boundaryMat = new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 });
+        const boundaryMat = new THREE.MeshBasicMaterial({ visible: false });
         
-        // North boundary
         const northBoundary = new THREE.Mesh(new THREE.BoxGeometry(boundarySize * 2, boundaryHeight, 1), boundaryMat);
         northBoundary.position.set(0, 2, boundarySize);
         this.scene.add(northBoundary);
         this.boundaryWalls.push(northBoundary);
         this.objects.push(northBoundary);
         
-        // South boundary
         const southBoundary = new THREE.Mesh(new THREE.BoxGeometry(boundarySize * 2, boundaryHeight, 1), boundaryMat);
         southBoundary.position.set(0, 2, -boundarySize);
         this.scene.add(southBoundary);
         this.boundaryWalls.push(southBoundary);
         this.objects.push(southBoundary);
         
-        // East boundary
         const eastBoundary = new THREE.Mesh(new THREE.BoxGeometry(1, boundaryHeight, boundarySize * 2), boundaryMat);
         eastBoundary.position.set(boundarySize, 2, 0);
         this.scene.add(eastBoundary);
         this.boundaryWalls.push(eastBoundary);
         this.objects.push(eastBoundary);
         
-        // West boundary
         const westBoundary = new THREE.Mesh(new THREE.BoxGeometry(1, boundaryHeight, boundarySize * 2), boundaryMat);
         westBoundary.position.set(-boundarySize, 2, 0);
         this.scene.add(westBoundary);
         this.boundaryWalls.push(westBoundary);
         this.objects.push(westBoundary);
         
-        // Add campfire in center
         this.addCampfire();
-        
-        // Add rocks and details
         this.addRocks();
-        
-        // Add some flowers
         this.addFlowers();
-        
-        // Add a small dock near the boat
         this.addDock();
-    }
-    
-    addDock() {
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
-        const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 4), woodMat);
-        dock.position.set(40, -0.3, 36);
-        dock.castShadow = true;
-        this.scene.add(dock);
-        this.objects.push(dock);
         
-        // Dock posts
-        const postMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const postPositions = [[38.5, -0.2, 34.5], [41.5, -0.2, 34.5], [38.5, -0.2, 37.5], [41.5, -0.2, 37.5]];
-        postPositions.forEach(pos => {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1, 6), postMat);
-            post.position.set(pos[0], pos[1], pos[2]);
-            post.castShadow = true;
-            this.scene.add(post);
-            this.objects.push(post);
-        });
+        const spawnMarker = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.2, 1.5, 0.2, 8),
+            new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x442200 })
+        );
+        spawnMarker.position.set(35, -0.4, 30);
+        spawnMarker.castShadow = true;
+        this.scene.add(spawnMarker);
+        this.objects.push(spawnMarker);
+        
+        const markerLight = new THREE.PointLight(0xff6600, 0.8, 20);
+        markerLight.position.set(35, 1, 30);
+        this.scene.add(markerLight);
+        this.objects.push(markerLight);
+        
+        console.log('📍 Маркер спавна монстра добавлен на позицию (35, 0, 30)');
     }
     
     addTrees() {
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
         
-        // Many trees spread across the island
         const treePositions = [];
         for (let i = 0; i < 100; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -445,7 +395,6 @@ export class World {
         const logMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3a });
         const fireMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
         
-        // Stone circle
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x887a6a });
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
@@ -456,7 +405,6 @@ export class World {
             this.objects.push(stone);
         }
         
-        // Logs
         const log1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.8, 6), logMat);
         log1.rotation.z = Math.PI / 2;
         log1.position.set(-0.4, -0.2, 0.3);
@@ -480,7 +428,6 @@ export class World {
         this.scene.add(light);
         this.objects.push(light);
         
-        // Animate fire
         const animateFire = () => {
             requestAnimationFrame(animateFire);
             if (fire.parent) {
@@ -525,8 +472,26 @@ export class World {
         }
     }
     
+    addDock() {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+        const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 4), woodMat);
+        dock.position.set(40, -0.3, 36);
+        dock.castShadow = true;
+        this.scene.add(dock);
+        this.objects.push(dock);
+        
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const postPositions = [[38.5, -0.2, 34.5], [41.5, -0.2, 34.5], [38.5, -0.2, 37.5], [41.5, -0.2, 37.5]];
+        postPositions.forEach(pos => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1, 6), postMat);
+            post.position.set(pos[0], pos[1], pos[2]);
+            post.castShadow = true;
+            this.scene.add(post);
+            this.objects.push(post);
+        });
+    }
+    
     clearScene() {
-        // Удаляем все объекты острова
         this.objects.forEach(obj => {
             if (obj && obj.parent) {
                 this.scene.remove(obj);
