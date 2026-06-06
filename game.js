@@ -25,7 +25,7 @@ class Game {
         this.yaw = -Math.PI / 4;
         
         this.gameActive = false;
-        this.gamePhase = 'basement'; // basement, island, escape
+        this.gamePhase = 'basement';
         this.raycaster = new THREE.Raycaster();
         
         this.init();
@@ -42,19 +42,16 @@ class Game {
         this.ui = new UIManager();
         this.story = new StoryManager(this.ui, this.inventory);
         
-        // Set global reference for callbacks
         window.gameInstance = this;
         
         this.setupEventListeners();
         
-        // Create world
         await this.world.createBasement();
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
         this.animate();
         this.showMenu();
         
-        // Start story
         this.story.startGame();
     }
     
@@ -78,11 +75,9 @@ class Game {
     }
     
     setupLighting() {
-        // Ambient light
         const ambientLight = new THREE.AmbientLight(0x332211);
         this.scene.add(ambientLight);
         
-        // Main directional light
         const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
         mainLight.position.set(10, 20, 5);
         mainLight.castShadow = true;
@@ -96,17 +91,14 @@ class Game {
         mainLight.shadow.camera.bottom = -20;
         this.scene.add(mainLight);
         
-        // Fill light
         const fillLight = new THREE.PointLight(0x6688aa, 0.3);
         fillLight.position.set(0, 5, 0);
         this.scene.add(fillLight);
         
-        // Back rim light
         const rimLight = new THREE.PointLight(0xffaa66, 0.2);
         rimLight.position.set(-5, 3, -8);
         this.scene.add(rimLight);
         
-        // Dynamic moonlight for island
         this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
         this.moonLight.position.set(-10, 15, -10);
         this.moonLight.castShadow = true;
@@ -156,14 +148,12 @@ class Game {
             }
         });
         
-        // Lock pointer on click
         this.renderer.domElement.addEventListener('click', () => {
             if (this.gameActive) {
                 this.renderer.domElement.requestPointerLock();
             }
         });
         
-        // Define lockChange function before using it
         const lockChange = () => {
             if (document.pointerLockElement === this.renderer.domElement) {
                 document.body.style.cursor = 'none';
@@ -175,7 +165,6 @@ class Game {
         document.addEventListener('pointerlockchange', lockChange);
         document.addEventListener('mozpointerlockchange', lockChange);
         
-        // Prevent context menu
         window.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     
@@ -188,9 +177,8 @@ class Game {
         const intersects = this.raycaster.intersectObjects(this.world.interactiveObjects, true);
         
         if (intersects.length > 0) {
-            // Find the actual interactive object (might be child of group)
             let obj = intersects[0].object;
-            while (obj && !obj.userData || !obj.userData.onInteract) {
+            while (obj && (!obj.userData || !obj.userData.onInteract)) {
                 if (obj.parent && obj.parent.userData && obj.parent.userData.onInteract) {
                     obj = obj.parent;
                     break;
@@ -240,7 +228,6 @@ class Game {
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             
-            // Show monster warning
             setTimeout(() => {
                 if (this.gameActive) {
                     this.ui.showMessage('👹 Вы слышите рычание вдалеке... Монстр приближается!', 4000);
@@ -278,26 +265,26 @@ class Game {
         
         let move = new THREE.Vector3(0, 0, 0);
         
+        // Правильное управление: W = вперед, S = назад, A = влево, D = вправо
         if (this.keys['KeyW']) move.add(forward);
         if (this.keys['KeyS']) move.sub(forward);
-        if (this.keys['KeyD']) move.add(right);
-        if (this.keys['KeyA']) move.sub(right);
+        if (this.keys['KeyA']) move.sub(right);  // A = влево (отрицательное направление right)
+        if (this.keys['KeyD']) move.add(right);   // D = вправо (положительное направление right)
         
         if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
         
-        // Apply movement
         this.player.position.add(move);
         
-        // Update physics
+        // Обновляем физику с правильными границами
         const bounds = this.gamePhase === 'basement' 
             ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 }
-            : { minX: -55, maxX: 55, minZ: -55, maxZ: 55 };
+            : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 }; // Границы острова (чуть меньше невидимых стен)
         this.player.updatePhysics(deltaTime, bounds);
         
         this.camera.position.copy(this.player.position);
         
-        // Add camera bob when walking
+        // Качание камеры при ходьбе
         if (move.length() > 0.01 && this.player.isGrounded) {
             const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
             this.camera.position.y = this.player.position.y + bobAmount;
@@ -305,29 +292,32 @@ class Game {
             this.camera.position.y = this.player.position.y;
         }
         
-        // Update monster AI
+        // Обновляем монстра
         if (this.gamePhase === 'island' && this.gameActive) {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) {
                 this.gameOver();
             }
             
-            // Update UI with monster distance
             const distToMonster = this.player.position.distanceTo(this.monster.position);
-            const statusDiv = document.getElementById('status');
-            if (statusDiv) {
+            const monsterStatusElem = document.getElementById('monster-status');
+            if (monsterStatusElem) {
                 if (distToMonster < 8) {
-                    statusDiv.style.borderRightColor = '#ff0000';
-                    statusDiv.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                    monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️';
+                    monsterStatusElem.style.color = '#ff0000';
                 } else if (distToMonster < 15) {
-                    statusDiv.style.borderRightColor = '#ff6600';
+                    monsterStatusElem.innerHTML = '🔴 БЛИЗКО';
+                    monsterStatusElem.style.color = '#ff6600';
+                } else if (distToMonster < 30) {
+                    monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
+                    monsterStatusElem.style.color = '#ffaa44';
                 } else {
-                    statusDiv.style.borderRightColor = '#ffaa44';
+                    monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
+                    monsterStatusElem.style.color = '#44ff44';
                 }
             }
         }
         
-        // Update distance to exit (basement)
         if (this.gamePhase === 'basement' && this.world.exitDoor) {
             const distToDoor = this.player.position.distanceTo(this.world.exitDoor.position);
             const distElem = document.getElementById('distance-indicator');
@@ -381,19 +371,16 @@ class Game {
         document.body.style.cursor = 'none';
         this.story.startGame();
         
-        // Reset monster position if needed
         this.monster.active = false;
         this.monster.position.set(35, 0, 30);
         this.monster.mesh.position.copy(this.monster.position);
         
-        // Show controls hint
         setTimeout(() => {
             if (this.gameActive) {
-                this.ui.showMessage('Используйте WASD для движения, мышь для осмотра, Shift для бега, E для взаимодействия', 5000);
+                this.ui.showMessage('Используйте WASD для движения, мышь для осмотра, Shift для бега, Пробел для прыжка, E для взаимодействия', 5000);
             }
         }, 1000);
     }
 }
 
-// Start the game
 const game = new Game();
