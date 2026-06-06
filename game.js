@@ -83,13 +83,11 @@ class Game {
         this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        // Загружаем FBX модель монстра
         this.updateLoadingProgress(90, 'Загрузка 3D модели монстра...');
         await this.loadMonsterFBX();
         
         this.updateLoadingProgress(100, 'Готово!');
         
-        // Скрываем экран загрузки и показываем меню
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) {
@@ -147,7 +145,6 @@ class Game {
             }, (error) => {
                 console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная');
                 console.log('💡 Поместите файл monster.fbx в папку assets/models/');
-                console.log('💡 Стандартная модель монстра уже создана и работает');
                 resolve(false);
             });
         });
@@ -167,15 +164,13 @@ class Game {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
         
-        // Добавляем оси для отладки
         const axesHelper = new THREE.AxesHelper(10);
         this.scene.add(axesHelper);
         
-        // Добавляем сетку для ориентации
         const gridHelper = new THREE.GridHelper(100, 20, 0xffaa44, 0x44aa44);
         this.scene.add(gridHelper);
         
-        console.log('🎮 Сцена настроена, добавлены отладочные элементы');
+        console.log('🎮 Сцена настроена');
     }
     
     setupWorld() {
@@ -183,11 +178,11 @@ class Game {
     }
     
     setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x332211);
+        const ambientLight = new THREE.AmbientLight(0x443322, 0.8);
         this.scene.add(ambientLight);
         
-        const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
-        mainLight.position.set(10, 20, 5);
+        const mainLight = new THREE.DirectionalLight(0xffdd99, 1.2);
+        mainLight.position.set(10, 15, 5);
         mainLight.castShadow = true;
         mainLight.shadow.mapSize.width = 1024;
         mainLight.shadow.mapSize.height = 1024;
@@ -199,18 +194,24 @@ class Game {
         mainLight.shadow.camera.bottom = -20;
         this.scene.add(mainLight);
         
-        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
-        fillLight.position.set(0, 5, 0);
+        const fillLight = new THREE.PointLight(0x8866aa, 0.5);
+        fillLight.position.set(0, -2, 0);
         this.scene.add(fillLight);
         
-        const rimLight = new THREE.PointLight(0xffaa66, 0.2);
+        const rimLight = new THREE.PointLight(0xffaa66, 0.4);
         rimLight.position.set(-5, 3, -8);
         this.scene.add(rimLight);
         
-        this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
+        this.moonLight = new THREE.DirectionalLight(0x88aaff, 0.3);
         this.moonLight.position.set(-10, 15, -10);
         this.moonLight.castShadow = true;
         this.scene.add(this.moonLight);
+        
+        const frontLight = new THREE.DirectionalLight(0xffcc88, 0.5);
+        frontLight.position.set(0, 5, 10);
+        this.scene.add(frontLight);
+        
+        console.log('💡 Освещение настроено');
     }
     
     setupEventListeners() {
