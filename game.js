@@ -83,7 +83,7 @@ class Game {
         this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        // Загружаем FBX модель монстра
+        // Загружаем FBX модель монстра (без таймаута)
         this.updateLoadingProgress(90, 'Загрузка 3D модели монстра...');
         await this.loadMonsterFBX();
         
@@ -110,14 +110,7 @@ class Game {
         const fbxPath = 'assets/models/monster.fbx';
         
         return new Promise((resolve) => {
-            // Таймаут на случай очень долгой загрузки
-            const timeout = setTimeout(() => {
-                console.warn('⚠️ Таймаут загрузки FBX, используем стандартную модель');
-                resolve(false);
-            }, 10000);
-            
             loader.load(fbxPath, (fbx) => {
-                clearTimeout(timeout);
                 console.log('✅ FBX модель монстра успешно загружена!');
                 this.fbxModel = fbx;
                 
@@ -125,6 +118,7 @@ class Game {
                     this.scene.remove(this.monster.mesh);
                 }
                 
+                // Настраиваем масштаб (подберите под вашу модель)
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = true;
@@ -149,11 +143,13 @@ class Game {
                 resolve(true);
             }, (xhr) => {
                 // Прогресс загрузки
-                const percent = Math.floor((xhr.loaded / xhr.total) * 100);
-                this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
+                if (xhr.total) {
+                    const percent = Math.floor((xhr.loaded / xhr.total) * 100);
+                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
+                }
             }, (error) => {
-                clearTimeout(timeout);
-                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная:', error);
+                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная:', error.message);
+                console.log('💡 Поместите файл monster.fbx в папку assets/models/');
                 resolve(false);
             });
         });
