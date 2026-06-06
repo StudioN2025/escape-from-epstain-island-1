@@ -152,8 +152,8 @@ class Game {
     
     setupRenderer() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
+        this.scene.background = new THREE.Color(0x050b1a);
+        this.scene.fog = new THREE.FogExp2(0x050b1a, 0.03);
         
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
         this.camera.position.set(0, 1.6, 0);
@@ -163,14 +163,6 @@ class Game {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
-        
-        const axesHelper = new THREE.AxesHelper(10);
-        this.scene.add(axesHelper);
-        
-        const gridHelper = new THREE.GridHelper(100, 20, 0xffaa44, 0x44aa44);
-        this.scene.add(gridHelper);
-        
-        console.log('🎮 Сцена настроена');
     }
     
     setupWorld() {
@@ -178,12 +170,10 @@ class Game {
     }
     
     setupLighting() {
-        // Ambient light - яркий
-        const ambientLight = new THREE.AmbientLight(0x665544, 0.9);
+        const ambientLight = new THREE.AmbientLight(0x332211);
         this.scene.add(ambientLight);
         
-        // Main directional light - яркий солнечный
-        const mainLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+        const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
         mainLight.position.set(10, 20, 5);
         mainLight.castShadow = true;
         mainLight.shadow.mapSize.width = 1024;
@@ -196,33 +186,18 @@ class Game {
         mainLight.shadow.camera.bottom = -20;
         this.scene.add(mainLight);
         
-        // Fill light снизу для подсветки
-        const fillLight = new THREE.PointLight(0xaa88aa, 0.7);
-        fillLight.position.set(0, -2, 0);
+        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
+        fillLight.position.set(0, 5, 0);
         this.scene.add(fillLight);
         
-        // Rim light сзади
-        const rimLight = new THREE.PointLight(0xffaa88, 0.6);
+        const rimLight = new THREE.PointLight(0xffaa66, 0.2);
         rimLight.position.set(-5, 3, -8);
         this.scene.add(rimLight);
         
-        // Moon light
-        this.moonLight = new THREE.DirectionalLight(0xaaccff, 0.4);
+        this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
         this.moonLight.position.set(-10, 15, -10);
         this.moonLight.castShadow = true;
         this.scene.add(this.moonLight);
-        
-        // Дополнительный фронтальный свет
-        const frontLight = new THREE.DirectionalLight(0xffdd99, 0.7);
-        frontLight.position.set(0, 5, 15);
-        this.scene.add(frontLight);
-        
-        // Вспомогательный свет сверху
-        const topLight = new THREE.PointLight(0xffcc88, 0.5);
-        topLight.position.set(0, 10, 0);
-        this.scene.add(topLight);
-        
-        console.log('💡 Яркое освещение настроено');
     }
     
     setupEventListeners() {
