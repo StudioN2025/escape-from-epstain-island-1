@@ -110,22 +110,18 @@ class Game {
         const fbxPath = 'assets/models/monster.fbx';
         
         return new Promise((resolve) => {
-            // Пробуем загрузить FBX
             loader.load(fbxPath, (fbx) => {
                 console.log('✅ FBX модель монстра успешно загружена!');
                 
-                // Удаляем стандартную модель
                 if (this.monster.mesh) {
                     this.scene.remove(this.monster.mesh);
                 }
                 
-                // Настраиваем FBX модель
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = true;
                 fbx.receiveShadow = true;
                 
-                // Создаем анимационный микшер
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 
                 if (fbx.animations && fbx.animations.length > 0) {
@@ -144,7 +140,6 @@ class Game {
                 
                 resolve(true);
             }, (xhr) => {
-                // Прогресс загрузки
                 if (xhr.total) {
                     const percent = Math.floor((xhr.loaded / xhr.total) * 100);
                     this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
@@ -160,8 +155,8 @@ class Game {
     
     setupRenderer() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x050b1a);
-        this.scene.fog = new THREE.FogExp2(0x050b1a, 0.03);
+        this.scene.background = new THREE.Color(0x87CEEB);
+        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
         
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
         this.camera.position.set(0, 1.6, 0);
@@ -171,6 +166,16 @@ class Game {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
+        
+        // Добавляем оси для отладки
+        const axesHelper = new THREE.AxesHelper(10);
+        this.scene.add(axesHelper);
+        
+        // Добавляем сетку для ориентации
+        const gridHelper = new THREE.GridHelper(100, 20, 0xffaa44, 0x44aa44);
+        this.scene.add(gridHelper);
+        
+        console.log('🎮 Сцена настроена, добавлены отладочные элементы');
     }
     
     setupWorld() {
@@ -473,7 +478,6 @@ class Game {
             };
         }
         
-        // Также настраиваем кнопки на экранах победы/поражения
         const retryBtn = document.getElementById('retry-btn');
         if (retryBtn) {
             retryBtn.onclick = () => {
@@ -515,10 +519,8 @@ class Game {
     }
 }
 
-// Создаем экземпляр игры
 const game = new Game();
 
-// Проверка создания монстра
 setTimeout(() => {
     if (game.monster && game.monster.mesh) {
         console.log('✅ Монстр успешно создан и виден в сцене');
