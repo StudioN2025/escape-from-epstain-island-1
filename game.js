@@ -178,11 +178,13 @@ class Game {
     }
     
     setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x443322, 0.8);
+        // Ambient light - яркий
+        const ambientLight = new THREE.AmbientLight(0x665544, 0.9);
         this.scene.add(ambientLight);
         
-        const mainLight = new THREE.DirectionalLight(0xffdd99, 1.2);
-        mainLight.position.set(10, 15, 5);
+        // Main directional light - яркий солнечный
+        const mainLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+        mainLight.position.set(10, 20, 5);
         mainLight.castShadow = true;
         mainLight.shadow.mapSize.width = 1024;
         mainLight.shadow.mapSize.height = 1024;
@@ -194,24 +196,33 @@ class Game {
         mainLight.shadow.camera.bottom = -20;
         this.scene.add(mainLight);
         
-        const fillLight = new THREE.PointLight(0x8866aa, 0.5);
+        // Fill light снизу для подсветки
+        const fillLight = new THREE.PointLight(0xaa88aa, 0.7);
         fillLight.position.set(0, -2, 0);
         this.scene.add(fillLight);
         
-        const rimLight = new THREE.PointLight(0xffaa66, 0.4);
+        // Rim light сзади
+        const rimLight = new THREE.PointLight(0xffaa88, 0.6);
         rimLight.position.set(-5, 3, -8);
         this.scene.add(rimLight);
         
-        this.moonLight = new THREE.DirectionalLight(0x88aaff, 0.3);
+        // Moon light
+        this.moonLight = new THREE.DirectionalLight(0xaaccff, 0.4);
         this.moonLight.position.set(-10, 15, -10);
         this.moonLight.castShadow = true;
         this.scene.add(this.moonLight);
         
-        const frontLight = new THREE.DirectionalLight(0xffcc88, 0.5);
-        frontLight.position.set(0, 5, 10);
+        // Дополнительный фронтальный свет
+        const frontLight = new THREE.DirectionalLight(0xffdd99, 0.7);
+        frontLight.position.set(0, 5, 15);
         this.scene.add(frontLight);
         
-        console.log('💡 Освещение настроено');
+        // Вспомогательный свет сверху
+        const topLight = new THREE.PointLight(0xffcc88, 0.5);
+        topLight.position.set(0, 10, 0);
+        this.scene.add(topLight);
+        
+        console.log('💡 Яркое освещение настроено');
     }
     
     setupEventListeners() {
