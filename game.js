@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Player } from './src/Player.js';
 import { Monster } from './src/Monster.js';
 import { World } from './src/World.js';
@@ -27,6 +28,8 @@ class Game {
         this.gameActive = false;
         this.gamePhase = 'basement';
         this.raycaster = new THREE.Raycaster();
+        this.fbxMixer = null; // Для анимаций FBX
+        this.fbxModel = null;  // FBX модель монстра
         
         this.init();
     }
@@ -49,10 +52,60 @@ class Game {
         await this.world.createBasement();
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
+        // Пытаемся загрузить FBX модель монстра
+        await this.loadMonsterFBX();
+        
         this.animate();
         this.showMenu();
         
         this.story.startGame();
+    }
+    
+    async loadMonsterFBX() {
+        const loader = new FBXLoader();
+        // Путь к FBX файлу - поместите ваш monster.fbx в папку assets/models/
+        const fbxPath = 'assets/models/monster.fbx';
+        
+        return new Promise((resolve) => {
+            loader.load(fbxPath, (fbx) => {
+                console.log('FBX модель монстра успешно загружена!');
+                this.fbxModel = fbx;
+                
+                // Удаляем стандартную модель монстра
+                if (this.monster.mesh) {
+                    this.scene.remove(this.monster.mesh);
+                }
+                
+                // Настраиваем FBX модель
+                fbx.scale.setScalar(0.02); // Масштабируем (подберите под вашу модель)
+                fbx.position.copy(this.monster.position);
+                fbx.castShadow = true;
+                fbx.receiveShadow = true;
+                
+                // Создаем анимационный микшер
+                this.fbxMixer = new THREE.AnimationMixer(fbx);
+                
+                // Воспроизводим первую анимацию (если есть)
+                if (fbx.animations && fbx.animations.length > 0) {
+                    console.log(`Найдено ${fbx.animations.length} анимаций`);
+                    const action = this.fbxMixer.clipAction(fbx.animations[0]);
+                    action.play();
+                    console.log('Анимация запущена');
+                } else {
+                    console.log('Анимаций в FBX не найдено');
+                }
+                
+                this.scene.add(fbx);
+                this.monster.mesh = fbx;
+                this.monster.useFBX = true;
+                this.monster.mixer = this.fbxMixer;
+                
+                resolve(true);
+            }, undefined, (error) => {
+                console.warn('Не удалось загрузить FBX модель, используется стандартная:', error);
+                resolve(false);
+            });
+        });
     }
     
     setupRenderer() {
@@ -268,23 +321,21 @@ class Game {
         // Правильное управление: W = вперед, S = назад, A = влево, D = вправо
         if (this.keys['KeyW']) move.add(forward);
         if (this.keys['KeyS']) move.sub(forward);
-        if (this.keys['KeyA']) move.sub(right);  // A = влево (отрицательное направление right)
-        if (this.keys['KeyD']) move.add(right);   // D = вправо (положительное направление right)
+        if (this.keys['KeyA']) move.sub(right);
+        if (this.keys['KeyD']) move.add(right);
         
         if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
         
         this.player.position.add(move);
         
-        // Обновляем физику с правильными границами
         const bounds = this.gamePhase === 'basement' 
             ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 }
-            : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 }; // Границы острова (чуть меньше невидимых стен)
+            : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
         this.player.updatePhysics(deltaTime, bounds);
         
         this.camera.position.copy(this.player.position);
         
-        // Качание камеры при ходьбе
         if (move.length() > 0.01 && this.player.isGrounded) {
             const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
             this.camera.position.y = this.player.position.y + bobAmount;
@@ -335,8 +386,14 @@ class Game {
     animate() {
         requestAnimationFrame(() => this.animate());
         
+        const deltaTime = Math.min(0.033, 1/60);
+        
+        // Обновляем анимации FBX
+        if (this.fbxMixer) {
+            this.fbxMixer.update(deltaTime);
+        }
+        
         if (this.gameActive) {
-            const deltaTime = Math.min(0.033, 1/60);
             this.updateMovement(deltaTime);
         }
         
@@ -373,7 +430,9 @@ class Game {
         
         this.monster.active = false;
         this.monster.position.set(35, 0, 30);
-        this.monster.mesh.position.copy(this.monster.position);
+        if (this.monster.mesh) {
+            this.monster.mesh.position.copy(this.monster.position);
+        }
         
         setTimeout(() => {
             if (this.gameActive) {
