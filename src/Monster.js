@@ -95,6 +95,19 @@ export class Monster {
         this.mesh.add(debugBox);
     }
     
+    replaceWithFBX(fbx) {
+        if (this.mesh) {
+            this.scene.remove(this.mesh);
+        }
+        this.mesh = fbx;
+        this.mesh.position.set(this.position.x, 0, this.position.z);
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
+        this.useFBX = true;
+        this.scene.add(this.mesh);
+        console.log('✅ Заменено на FBX модель монстра');
+    }
+    
     activate() {
         this.active = true;
         // Убеждаемся что Y позиция = 0 (на земле)
@@ -125,14 +138,14 @@ export class Monster {
             // Границы и Y позиция = 0 (земля)
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
-            this.position.y = 0; // Фиксируем на земле
+            this.position.y = 0;
             
             if (this.mesh) {
                 this.mesh.position.copy(this.position);
                 const angle = Math.atan2(direction.x, direction.z);
                 this.mesh.rotation.y = angle;
                 
-                // Анимация
+                // Анимация пульсации
                 const time = Date.now() * 0.01;
                 const scale = 1 + Math.sin(time) * 0.03;
                 this.mesh.scale.set(scale, scale, scale);
