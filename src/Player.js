@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export class Player {
     constructor(camera) {
         this.camera = camera;
