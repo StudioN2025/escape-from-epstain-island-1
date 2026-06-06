@@ -6,6 +6,8 @@ export class World {
         this.interactiveObjects = [];
         this.objects = [];
         this.exitDoor = null;
+        this.waterPlane = null;
+        this.boundaryWalls = [];
     }
     
     async createBasement() {
@@ -214,25 +216,33 @@ export class World {
         
         // Sky background
         this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.005);
+        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
         
-        // Large island ground (much bigger)
+        // Large island ground
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), groundMat);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.5;
         ground.receiveShadow = true;
         this.scene.add(ground);
         
+        // Sand around the edges
+        const sandMat = new THREE.MeshStandardMaterial({ color: 0xddbb77, roughness: 0.8 });
+        const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
+        sandRing.rotation.x = -Math.PI / 2;
+        sandRing.position.y = -0.45;
+        sandRing.receiveShadow = true;
+        this.scene.add(sandRing);
+        
         // Add varied terrain (small hills)
         const hillMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2a });
-        for (let i = 0; i < 50; i++) {
-            const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 2, 0.5, 8), hillMat);
+        for (let i = 0; i < 60; i++) {
+            const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.4, 8), hillMat);
             const angle = Math.random() * Math.PI * 2;
-            const radius = 20 + Math.random() * 35;
+            const radius = 10 + Math.random() * 35;
             hill.position.x = Math.cos(angle) * radius;
             hill.position.z = Math.sin(angle) * radius;
-            hill.position.y = -0.3;
+            hill.position.y = -0.35;
             hill.castShadow = true;
             this.scene.add(hill);
         }
@@ -240,7 +250,7 @@ export class World {
         // Add many trees
         this.addTrees();
         
-        // Boat (escape object) - placed far away
+        // Boat (escape object) - placed at the beach
         const boatGroup = new THREE.Group();
         const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
         const boatBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 4), boatMat);
@@ -267,7 +277,7 @@ export class World {
         sail.castShadow = true;
         boatGroup.add(sail);
         
-        boatGroup.position.set(45, 0, 40);
+        boatGroup.position.set(42, 0, 38);
         boatGroup.castShadow = true;
         this.scene.add(boatGroup);
         
@@ -280,18 +290,48 @@ export class World {
         };
         this.interactiveObjects.push(boatGroup);
         
-        // Add particle effect around boat
-        const boatGlow = new THREE.PointLight(0x44aaff, 0.5, 15);
-        boatGlow.position.set(45, 1, 40);
-        this.scene.add(boatGlow);
+        // Water around island (infinite ocean)
+        const waterMat = new THREE.MeshStandardMaterial({ 
+            color: 0x3366aa, 
+            metalness: 0.9, 
+            roughness: 0.2, 
+            transparent: true, 
+            opacity: 0.85 
+        });
+        this.waterPlane = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), waterMat);
+        this.waterPlane.rotation.x = -Math.PI / 2;
+        this.waterPlane.position.y = -0.6;
+        this.waterPlane.receiveShadow = true;
+        this.scene.add(this.waterPlane);
         
-        // Water around island
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x3366aa, metalness: 0.9, roughness: 0.3, transparent: true, opacity: 0.85 });
-        const water = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), waterMat);
-        water.rotation.x = -Math.PI / 2;
-        water.position.y = -0.8;
-        water.receiveShadow = true;
-        this.scene.add(water);
+        // Create invisible boundary walls to prevent falling off
+        const boundarySize = 48;
+        const boundaryHeight = 5;
+        const boundaryMat = new THREE.MeshBasicMaterial({ visible: false, transparent: true, opacity: 0 });
+        
+        // North boundary
+        const northBoundary = new THREE.Mesh(new THREE.BoxGeometry(boundarySize * 2, boundaryHeight, 1), boundaryMat);
+        northBoundary.position.set(0, 2, boundarySize);
+        this.scene.add(northBoundary);
+        this.boundaryWalls.push(northBoundary);
+        
+        // South boundary
+        const southBoundary = new THREE.Mesh(new THREE.BoxGeometry(boundarySize * 2, boundaryHeight, 1), boundaryMat);
+        southBoundary.position.set(0, 2, -boundarySize);
+        this.scene.add(southBoundary);
+        this.boundaryWalls.push(southBoundary);
+        
+        // East boundary
+        const eastBoundary = new THREE.Mesh(new THREE.BoxGeometry(1, boundaryHeight, boundarySize * 2), boundaryMat);
+        eastBoundary.position.set(boundarySize, 2, 0);
+        this.scene.add(eastBoundary);
+        this.boundaryWalls.push(eastBoundary);
+        
+        // West boundary
+        const westBoundary = new THREE.Mesh(new THREE.BoxGeometry(1, boundaryHeight, boundarySize * 2), boundaryMat);
+        westBoundary.position.set(-boundarySize, 2, 0);
+        this.scene.add(westBoundary);
+        this.boundaryWalls.push(westBoundary);
         
         // Add campfire in center
         this.addCampfire();
@@ -301,6 +341,27 @@ export class World {
         
         // Add some flowers
         this.addFlowers();
+        
+        // Add a small dock near the boat
+        this.addDock();
+    }
+    
+    addDock() {
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+        const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 4), woodMat);
+        dock.position.set(40, -0.3, 36);
+        dock.castShadow = true;
+        this.scene.add(dock);
+        
+        // Dock posts
+        const postMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const postPositions = [[38.5, -0.2, 34.5], [41.5, -0.2, 34.5], [38.5, -0.2, 37.5], [41.5, -0.2, 37.5]];
+        postPositions.forEach(pos => {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1, 6), postMat);
+            post.position.set(pos[0], pos[1], pos[2]);
+            post.castShadow = true;
+            this.scene.add(post);
+        });
     }
     
     addTrees() {
@@ -309,9 +370,9 @@ export class World {
         
         // Many trees spread across the island
         const treePositions = [];
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 100; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 15 + Math.random() * 40;
+            const radius = 8 + Math.random() * 38;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             treePositions.push([x, -0.5, z]);
@@ -384,13 +445,13 @@ export class World {
     
     addRocks() {
         const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a });
-        for (let i = 0; i < 60; i++) {
-            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3), rockMat);
+        for (let i = 0; i < 80; i++) {
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), rockMat);
             const angle = Math.random() * Math.PI * 2;
-            const radius = 10 + Math.random() * 45;
+            const radius = 12 + Math.random() * 42;
             rock.position.x = Math.cos(angle) * radius;
             rock.position.z = Math.sin(angle) * radius;
-            rock.position.y = -0.4;
+            rock.position.y = -0.45;
             rock.scale.setScalar(0.5 + Math.random() * 0.8);
             rock.castShadow = true;
             this.scene.add(rock);
@@ -398,14 +459,16 @@ export class World {
     }
     
     addFlowers() {
-        const flowerMat = new THREE.MeshStandardMaterial({ color: 0xffaa66 });
-        for (let i = 0; i < 200; i++) {
-            const flower = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.15, 6), flowerMat);
+        const flowerColors = [0xffaa66, 0xff66aa, 0xaa66ff, 0xff6666];
+        for (let i = 0; i < 300; i++) {
+            const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+            const flowerMat = new THREE.MeshStandardMaterial({ color: color });
+            const flower = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.12, 6), flowerMat);
             const angle = Math.random() * Math.PI * 2;
-            const radius = 5 + Math.random() * 50;
+            const radius = 5 + Math.random() * 48;
             flower.position.x = Math.cos(angle) * radius;
             flower.position.z = Math.sin(angle) * radius;
-            flower.position.y = -0.45;
+            flower.position.y = -0.48;
             flower.castShadow = true;
             this.scene.add(flower);
         }
@@ -415,5 +478,10 @@ export class World {
         this.objects.forEach(obj => this.scene.remove(obj));
         this.objects = [];
         this.interactiveObjects = [];
+        if (this.waterPlane) {
+            this.scene.remove(this.waterPlane);
+        }
+        this.boundaryWalls.forEach(wall => this.scene.remove(wall));
+        this.boundaryWalls = [];
     }
 }
