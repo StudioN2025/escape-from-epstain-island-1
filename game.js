@@ -26,6 +26,7 @@ class Game {
         
         this.gameActive = false;
         this.gamePhase = 'basement'; // basement, island, escape
+        this.raycaster = new THREE.Raycaster();
         
         this.init();
     }
@@ -152,9 +153,7 @@ class Game {
             }
         });
         
-        document.addEventListener('pointerlockchange', lockChange);
-        document.addEventListener('mozpointerlockchange', lockChange);
-        
+        // Define lockChange function before using it
         const lockChange = () => {
             if (document.pointerLockElement === this.renderer.domElement) {
                 document.body.style.cursor = 'none';
@@ -162,16 +161,18 @@ class Game {
                 document.body.style.cursor = 'auto';
             }
         };
+        
+        document.addEventListener('pointerlockchange', lockChange);
+        document.addEventListener('mozpointerlockchange', lockChange);
     }
     
     checkInteraction() {
         if (!this.gameActive) return;
         
-        const raycaster = new THREE.Raycaster();
         const center = new THREE.Vector2(0, 0);
-        raycaster.setFromCamera(center, this.camera);
+        this.raycaster.setFromCamera(center, this.camera);
         
-        const intersects = raycaster.intersectObjects(this.world.interactiveObjects);
+        const intersects = this.raycaster.intersectObjects(this.world.interactiveObjects);
         
         if (intersects.length > 0) {
             const obj = intersects[0].object;
@@ -221,13 +222,17 @@ class Game {
     winGame() {
         this.gameActive = false;
         this.ui.showWinScreen();
-        document.exitPointerLock();
+        if (document.exitPointerLock) {
+            document.exitPointerLock();
+        }
     }
     
     gameOver() {
         this.gameActive = false;
         this.ui.showGameOver();
-        document.exitPointerLock();
+        if (document.exitPointerLock) {
+            document.exitPointerLock();
+        }
     }
     
     updateMovement(deltaTime) {
