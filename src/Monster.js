@@ -44,8 +44,8 @@ export class Monster {
         group.add(leftEye);
         group.add(rightEye);
         
-        // Зрачки - черные но с бликом
-        const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x000000 });
+        // Зрачки - черные
+        const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
         const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
         const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
         leftPupil.position.set(-0.35, 0.33, 1.05);
@@ -54,7 +54,7 @@ export class Monster {
         group.add(rightPupil);
         
         // Блик в глазах
-        const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.3 });
+        const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const leftHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
         const rightHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
         leftHighlight.position.set(-0.4, 0.42, 1.1);
@@ -62,15 +62,15 @@ export class Monster {
         group.add(leftHighlight);
         group.add(rightHighlight);
         
-        // Рот - темный но с подсветкой
-        const mouthMat = new THREE.MeshStandardMaterial({ color: 0x883333, emissive: 0x441111 });
+        // Рот
+        const mouthMat = new THREE.MeshStandardMaterial({ color: 0x883333 });
         const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 16, 32), mouthMat);
         mouth.rotation.x = 0.2;
         mouth.position.set(0, 0.05, 0.9);
         group.add(mouth);
         
         // Зубы - белые
-        const toothMat = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0x442200 });
+        const toothMat = new THREE.MeshStandardMaterial({ color: 0xffffee });
         const teethPositions = [[-0.12, 0.0, 1.05], [0, 0.0, 1.07], [0.12, 0.0, 1.05]];
         teethPositions.forEach(pos => {
             const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.12, 4), toothMat);
@@ -79,7 +79,7 @@ export class Monster {
         });
         
         // Рога - золотистые
-        const hornMat = new THREE.MeshStandardMaterial({ color: 0xddaa77, emissive: 0x442200, emissiveIntensity: 0.3 });
+        const hornMat = new THREE.MeshStandardMaterial({ color: 0xddaa77 });
         const leftHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
         const rightHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
         leftHorn.position.set(-0.4, 0.68, 0.5);
@@ -87,7 +87,7 @@ export class Monster {
         group.add(leftHorn);
         group.add(rightHorn);
         
-        // Ноги - светлые
+        // Ноги
         const legMat = new THREE.MeshStandardMaterial({ color: 0xcc5555 });
         const legPositions = [[-0.45, -0.75, 0.55], [0.45, -0.75, 0.55], [-0.45, -0.75, -0.35], [0.45, -0.75, -0.35]];
         legPositions.forEach(pos => {
@@ -97,7 +97,7 @@ export class Monster {
             group.add(leg);
         });
         
-        // Когти на ногах
+        // Когти
         const clawMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
         const clawPositions = [[-0.5, -0.45, 0.9], [0.5, -0.45, 0.9], [-0.5, -0.45, -0.65], [0.5, -0.45, -0.65]];
         clawPositions.forEach(pos => {
@@ -106,8 +106,8 @@ export class Monster {
             group.add(claw);
         });
         
-        // Шипы на спине - светлые
-        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xdd6666, emissive: 0x331111 });
+        // Шипы на спине
+        const spikeMat = new THREE.MeshStandardMaterial({ color: 0xdd6666 });
         const spikePositions = [[0, 0.25, -0.85], [0.3, 0.15, -0.9], [-0.3, 0.15, -0.9], [0.15, -0.05, -0.95], [-0.15, -0.05, -0.95]];
         spikePositions.forEach(pos => {
             const spike = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 6), spikeMat);
@@ -115,15 +115,10 @@ export class Monster {
             group.add(spike);
         });
         
-        // Собственный яркий свет монстра
-        const monsterLight = new THREE.PointLight(0xff6633, 1.2, 18);
+        // Собственный свет монстра
+        const monsterLight = new THREE.PointLight(0xff6633, 0.8, 15);
         monsterLight.position.set(0, 0.5, 0);
         group.add(monsterLight);
-        
-        // Дополнительный свет спереди
-        const frontLight = new THREE.PointLight(0xff8844, 0.8, 12);
-        frontLight.position.set(0, 0.3, 1.2);
-        group.add(frontLight);
         
         this.mesh = group;
         this.mesh.position.set(this.position.x, 0, this.position.z);
@@ -131,10 +126,10 @@ export class Monster {
         
         console.log('✅ Монстр создан на позиции:', this.mesh.position);
         
-        // Отладочный куб (полупрозрачный, чтобы видеть позицию)
+        // Отладочный куб
         const debugBox = new THREE.Mesh(
             new THREE.BoxGeometry(1.3, 1.3, 1.3),
-            new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true, transparent: true, opacity: 0.4 })
+            new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true, transparent: true, opacity: 0.3 })
         );
         debugBox.position.set(0, 0, 0);
         this.mesh.add(debugBox);
@@ -143,9 +138,8 @@ export class Monster {
         const animateLights = () => {
             requestAnimationFrame(animateLights);
             if (this.mesh && this.mesh.parent) {
-                const intensity = 0.8 + Math.sin(Date.now() * 0.008) * 0.4;
+                const intensity = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
                 monsterLight.intensity = intensity;
-                frontLight.intensity = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
             }
         };
         animateLights();
@@ -162,7 +156,7 @@ export class Monster {
         this.useFBX = true;
         
         // Добавляем свет к FBX модели
-        const fbxLight = new THREE.PointLight(0xff6633, 1.0, 15);
+        const fbxLight = new THREE.PointLight(0xff6633, 0.8, 15);
         fbxLight.position.set(0, 0.5, 0);
         this.mesh.add(fbxLight);
         
@@ -205,7 +199,6 @@ export class Monster {
                 const angle = Math.atan2(direction.x, direction.z);
                 this.mesh.rotation.y = angle;
                 
-                // Анимация пульсации размера
                 const time = Date.now() * 0.012;
                 const scale = 1 + Math.sin(time) * 0.05;
                 this.mesh.scale.set(scale, scale, scale);
