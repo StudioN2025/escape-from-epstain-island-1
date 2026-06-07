@@ -6,12 +6,14 @@ import { World } from './src/World.js';
 import { Inventory } from './src/Inventory.js';
 import { StoryManager } from './src/StoryManager.js';
 import { UIManager } from './src/UI.js';
+import { PostProcessing } from './src/PostProcessing.js'; // Добавлено
 
 class Game {
     constructor() {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
+        this.postProcessing = null; // Добавлено
         this.player = null;
         this.monster = null;
         this.world = null;
@@ -51,39 +53,42 @@ class Game {
         this.updateLoadingProgress(5, 'Инициализация рендерера...');
         this.setupRenderer();
         
-        this.updateLoadingProgress(15, 'Создание мира...');
+        this.updateLoadingProgress(15, 'Настройка постобработки...');
+        this.setupPostProcessing(); // Добавлено
+        
+        this.updateLoadingProgress(25, 'Создание мира...');
         this.setupWorld();
         
-        this.updateLoadingProgress(25, 'Настройка освещения...');
+        this.updateLoadingProgress(35, 'Настройка освещения...');
         this.setupLighting();
         
-        this.updateLoadingProgress(35, 'Загрузка игрока...');
+        this.updateLoadingProgress(45, 'Загрузка игрока...');
         this.player = new Player(this.camera);
         
-        this.updateLoadingProgress(45, 'Загрузка монстра...');
+        this.updateLoadingProgress(55, 'Загрузка монстра...');
         this.monster = new Monster(this.scene);
         
-        this.updateLoadingProgress(55, 'Загрузка инвентаря...');
+        this.updateLoadingProgress(65, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
         
-        this.updateLoadingProgress(60, 'Загрузка интерфейса...');
+        this.updateLoadingProgress(70, 'Загрузка интерфейса...');
         this.ui = new UIManager();
         
-        this.updateLoadingProgress(65, 'Загрузка сюжета...');
+        this.updateLoadingProgress(75, 'Загрузка сюжета...');
         this.story = new StoryManager(this.ui, this.inventory);
         
         window.gameInstance = this;
         
-        this.updateLoadingProgress(70, 'Настройка управления...');
+        this.updateLoadingProgress(80, 'Настройка управления...');
         this.setupEventListeners();
         
-        this.updateLoadingProgress(75, 'Создание подвала...');
+        this.updateLoadingProgress(85, 'Создание подвала...');
         await this.world.createBasement();
         
-        this.updateLoadingProgress(85, 'Создание объектов...');
+        this.updateLoadingProgress(90, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        this.updateLoadingProgress(90, 'Загрузка 3D модели монстра...');
+        this.updateLoadingProgress(93, 'Загрузка моделей монстра...');
         await this.loadMonsterFBX();
         
         this.updateLoadingProgress(100, 'Готово!');
@@ -101,6 +106,11 @@ class Game {
         
         this.animate();
         this.story.startGame();
+    }
+    
+    setupPostProcessing() {
+        this.postProcessing = new PostProcessing(this.renderer, this.scene, this.camera);
+        console.log('✨ Постобработка настроена');
     }
     
     async loadMonsterFBX() {
@@ -140,7 +150,7 @@ class Game {
             }, (xhr) => {
                 if (xhr.total) {
                     const percent = Math.floor((xhr.loaded / xhr.total) * 100);
-                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
+                    this.updateLoadingProgress(93 + Math.floor(percent * 0.07), `Загрузка модели: ${percent}%`);
                 }
             }, (error) => {
                 console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная');
@@ -160,6 +170,7 @@ class Game {
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
@@ -213,6 +224,11 @@ class Game {
                 e.preventDefault();
                 this.player.jump();
             }
+            // Нажатие B для включения/выключения постобработки (опционально)
+            if (e.code === 'KeyB' && this.postProcessing) {
+                this.postProcessing.toggleEffects();
+                console.log('Постобработка:', this.postProcessing.effectActive ? 'Вкл' : 'Выкл');
+            }
         });
         
         window.addEventListener('keyup', (e) => {
@@ -263,6 +279,21 @@ class Game {
         document.addEventListener('mozpointerlockchange', lockChange);
         
         window.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        window.addEventListener('resize', () => this.onWindowResize());
+    }
+    
+    onWindowResize() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+        
+        if (this.postProcessing) {
+            this.postProcessing.resize(width, height);
+        }
     }
     
     checkInteraction() {
@@ -325,6 +356,11 @@ class Game {
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             
+            // Усиливаем свечение на острове
+            if (this.postProcessing) {
+                this.postProcessing.setBloomStrength(0.8);
+            }
+            
             setTimeout(() => {
                 if (this.gameActive) {
                     this.ui.showMessage('👹 Вы слышите рычание вдалеке... Монстр приближается!', 4000);
@@ -383,6 +419,10 @@ class Game {
         
         this.camera.position.copy(this.player.position);
         
+        if (this.world && this.gamePhase === 'island') {
+            this.world.updatePlayerPosition(this.player.position);
+        }
+        
         if (move.length() > 0.01 && this.player.isGrounded) {
             const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
             this.camera.position.y = this.player.position.y + bobAmount;
@@ -394,23 +434,38 @@ class Game {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) {
                 this.gameOver();
+                return;
             }
             
             const distToMonster = this.player.position.distanceTo(this.monster.position);
             const monsterStatusElem = document.getElementById('monster-status');
             if (monsterStatusElem) {
-                if (distToMonster < 8) {
-                    monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️';
+                if (distToMonster < 5) {
+                    monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ОНО РЯДОМ! ⚠️';
                     monsterStatusElem.style.color = '#ff0000';
-                } else if (distToMonster < 15) {
-                    monsterStatusElem.innerHTML = '🔴 БЛИЗКО';
+                    monsterStatusElem.style.fontWeight = 'bold';
+                    // Усиливаем свечение при приближении монстра
+                    if (this.postProcessing) {
+                        this.postProcessing.setBloomStrength(1.2);
+                    }
+                } else if (distToMonster < 10) {
+                    monsterStatusElem.innerHTML = '🔴 ОПАСНО! ОНО БЛИЗКО!';
                     monsterStatusElem.style.color = '#ff6600';
-                } else if (distToMonster < 30) {
+                    if (this.postProcessing) {
+                        this.postProcessing.setBloomStrength(0.9);
+                    }
+                } else if (distToMonster < 20) {
                     monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
                     monsterStatusElem.style.color = '#ffaa44';
+                    if (this.postProcessing) {
+                        this.postProcessing.setBloomStrength(0.7);
+                    }
                 } else {
                     monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
                     monsterStatusElem.style.color = '#44ff44';
+                    if (this.postProcessing) {
+                        this.postProcessing.setBloomStrength(0.6);
+                    }
                 }
             }
         }
@@ -442,7 +497,12 @@ class Game {
             this.updateMovement(deltaTime);
         }
         
-        this.renderer.render(this.scene, this.camera);
+        // Рендер с постобработкой или без
+        if (this.postProcessing && this.postProcessing.composer) {
+            this.postProcessing.render();
+        } else if (this.renderer) {
+            this.renderer.render(this.scene, this.camera);
+        }
     }
     
     showMenu() {
@@ -496,6 +556,11 @@ class Game {
         this.monster.position.set(35, 0, 30);
         if (this.monster.mesh) {
             this.monster.mesh.position.copy(this.monster.position);
+        }
+        
+        // Устанавливаем нормальное свечение в подвале
+        if (this.postProcessing) {
+            this.postProcessing.setBloomStrength(0.4);
         }
         
         setTimeout(() => {
