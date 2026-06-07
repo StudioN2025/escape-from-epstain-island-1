@@ -20,7 +20,6 @@ export class World {
         this.sunLight = null;
         this.ambientLight = null;
         
-        // Текстуры
         this.textures = {
             stuccoWall: null,
             stuccoCeiling: null,
@@ -64,7 +63,6 @@ export class World {
     loadTextures() {
         const textureLoader = new THREE.TextureLoader();
         
-        // Загрузка текстур
         this.textures.stuccoWall = textureLoader.load('assets/textures/stucco-5.jpg');
         this.textures.stuccoWall.wrapS = THREE.RepeatWrapping;
         this.textures.stuccoWall.wrapT = THREE.RepeatWrapping;
@@ -156,8 +154,8 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        // Пол с текстурой ламината
-        const floorMat = new THREE.MeshStandardMaterial({ map: this.textures.laminate, roughness: 0.4, metalness: 0.05 });
+        // Пол с текстурой - приглушенный
+        const floorMat = new THREE.MeshStandardMaterial({ map: this.textures.laminate, roughness: 0.6, metalness: 0.05, color: 0xffffff });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.5;
@@ -165,8 +163,8 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Стены с текстурой stucco-5
-        const wallMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoWall, roughness: 0.5 });
+        // Стены - более темные
+        const wallMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoWall, roughness: 0.7, color: 0x888888 });
         
         const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
         backWall.position.set(0, 1.25, -9);
@@ -192,24 +190,25 @@ export class World {
         this.scene.add(rightWall);
         this.basementObjects.push(rightWall);
         
-        // Потолок с текстурой stucco-9
-        const ceilingMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoCeiling, roughness: 0.6 });
+        // Потолок
+        const ceilingMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoCeiling, roughness: 0.8, color: 0x999999 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
         // Деревянные балки
-        const beamMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 0.5 });
+        const beamMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a, roughness: 0.5 });
         for (let x = -6; x <= 6; x += 4) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 17.5), beamMat);
             beam.position.set(x, 2.75, 0);
+            beam.castShadow = true;
             this.scene.add(beam);
             this.basementObjects.push(beam);
         }
         
         // Колонны
-        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a, roughness: 0.5 });
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.5 });
         const pillarPositions = [
             [-5, -0.2, -5], [5, -0.2, -5],
             [-5, -0.2, 5], [5, -0.2, 5],
@@ -227,7 +226,7 @@ export class World {
         this.addBarrelsFromCache();
         this.addTorchesFromCache();
         
-        const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
+        const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x7a6a5a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
         pedestal.castShadow = true;
@@ -247,6 +246,12 @@ export class World {
             doorModel.position.set(8, 0.1, -8.85);
             doorModel.castShadow = true;
             doorModel.receiveShadow = true;
+            doorModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
             
             this.exitDoor = doorModel;
             this.scene.add(doorModel);
@@ -272,14 +277,14 @@ export class World {
     }
     
     addDefaultDoor() {
-        const doorMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0x7a5a4a });
         this.exitDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), doorMat);
         this.exitDoor.position.set(8, 0.1, -8.9);
         this.exitDoor.castShadow = true;
         this.scene.add(this.exitDoor);
         this.basementObjects.push(this.exitDoor);
         
-        const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
+        const frameMat = new THREE.MeshStandardMaterial({ color: 0x6a4a3a });
         const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
         frameLeft.position.set(7.35, 1.2, -8.9);
         const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
@@ -317,11 +322,18 @@ export class World {
                 barrel.position.set(pos.x, -0.2, pos.z);
                 barrel.rotation.y = pos.rot;
                 barrel.castShadow = true;
+                barrel.receiveShadow = true;
+                barrel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
                 
                 this.scene.add(barrel);
                 this.basementObjects.push(barrel);
             });
-            console.log(`🛢️ Добавлено ${barrelPositions.length} увеличенных GLB бочек`);
+            console.log(`🛢️ Добавлено ${barrelPositions.length} GLB бочек`);
         };
         
         if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
@@ -341,7 +353,7 @@ export class World {
     }
     
     addBarrelsStandard() {
-        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
+        const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6a4a3a });
         const positions = [
             [-4, -0.1, 3], [4, -0.1, 3],
             [-4, -0.1, -2], [4, -0.1, -2],
@@ -376,6 +388,13 @@ export class World {
                 torch.scale.setScalar(scale);
                 torch.position.set(pos[0], pos[1], pos[2]);
                 torch.castShadow = true;
+                torch.receiveShadow = true;
+                torch.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
                 
                 if (Math.abs(pos[0]) > 8) {
                     torch.rotation.y = pos[0] > 0 ? -Math.PI / 2 : Math.PI / 2;
@@ -384,15 +403,16 @@ export class World {
                 this.scene.add(torch);
                 this.basementObjects.push(torch);
                 
-                const light = new THREE.PointLight(0xff6633, 0.4, 7);
+                const light = new THREE.PointLight(0xff6633, 0.35, 7);
                 light.position.set(pos[0], pos[1] + 0.2, pos[2]);
+                light.castShadow = true;
                 this.scene.add(light);
                 this.basementObjects.push(light);
                 
                 const animateLight = () => {
                     requestAnimationFrame(animateLight);
                     if (light.parent) {
-                        light.intensity = 0.3 + Math.sin(Date.now() * 0.008) * 0.15;
+                        light.intensity = 0.25 + Math.sin(Date.now() * 0.008) * 0.12;
                     }
                 };
                 animateLight();
@@ -454,6 +474,13 @@ export class World {
             keyModel.scale.setScalar(scale);
             keyModel.position.set(-3, 0, 4);
             keyModel.castShadow = true;
+            keyModel.receiveShadow = true;
+            keyModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
             
             const newBox = new THREE.Box3().setFromObject(keyModel);
             const minY = newBox.min.y;
@@ -478,7 +505,7 @@ export class World {
             };
             animateKey();
             
-            const glowLight = new THREE.PointLight(0xffaa44, 0.3, 3);
+            const glowLight = new THREE.PointLight(0xffaa44, 0.25, 3);
             glowLight.position.set(-3, 0.3, 4);
             this.scene.add(glowLight);
             this.basementObjects.push(glowLight);
@@ -486,7 +513,7 @@ export class World {
             const animateLight = () => {
                 requestAnimationFrame(animateLight);
                 if (glowLight.parent) {
-                    glowLight.intensity = 0.2 + Math.sin(Date.now() * 0.005) * 0.15;
+                    glowLight.intensity = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
                 }
             };
             animateLight();
@@ -538,7 +565,7 @@ export class World {
         this.basementObjects.push(keyGroup);
         this.interactiveObjects.push(keyGroup);
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.3, 3);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.25, 3);
         glowLight.position.set(-3, 0.35, 4);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
@@ -548,7 +575,7 @@ export class World {
             if (keyGroup.parent) {
                 keyGroup.position.y = 0.15 + Math.sin(Date.now() * 0.003) * 0.05;
                 keyGroup.rotation.y += 0.02;
-                glowLight.intensity = 0.2 + Math.sin(Date.now() * 0.005) * 0.15;
+                glowLight.intensity = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
             }
         };
         animateKey();
@@ -566,7 +593,7 @@ export class World {
             this.interactiveObjects.push(this.exitDoor);
         }
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.4, 4);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.3, 4);
         if (this.exitDoor) {
             glowLight.position.copy(this.exitDoor.position);
         } else {
@@ -578,7 +605,7 @@ export class World {
         const animateGlow = () => {
             requestAnimationFrame(animateGlow);
             if (glowLight.parent) {
-                glowLight.intensity = 0.3 + Math.sin(Date.now() * 0.004) * 0.2;
+                glowLight.intensity = 0.2 + Math.sin(Date.now() * 0.004) * 0.15;
             }
         };
         animateGlow();
@@ -603,8 +630,8 @@ export class World {
         
         this.setupSunLighting();
         
-        // Земля с текстурой травы grass-2
-        const groundMat = new THREE.MeshStandardMaterial({ map: this.textures.grass, roughness: 0.9 });
+        // Земля - темнее
+        const groundMat = new THREE.MeshStandardMaterial({ map: this.textures.grass, roughness: 0.9, color: 0x88aa66 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.5;
@@ -612,8 +639,8 @@ export class World {
         this.scene.add(ground);
         this.objects.push(ground);
         
-        // Песок с текстурой sand-1
-        const sandMat = new THREE.MeshStandardMaterial({ map: this.textures.sand, roughness: 0.8 });
+        // Песок - приглушенный
+        const sandMat = new THREE.MeshStandardMaterial({ map: this.textures.sand, roughness: 0.8, color: 0xccaa88 });
         const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
         sandRing.rotation.x = -Math.PI / 2;
         sandRing.position.y = -0.45;
@@ -621,7 +648,7 @@ export class World {
         this.scene.add(sandRing);
         this.objects.push(sandRing);
         
-        const hillMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2a, roughness: 0.8 });
+        const hillMat = new THREE.MeshStandardMaterial({ color: 0x5a8a4a, roughness: 0.8 });
         for (let i = 0; i < 40; i++) {
             const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.4, 8), hillMat);
             const angle = Math.random() * Math.PI * 2;
@@ -639,9 +666,9 @@ export class World {
         this.addBoatFromCache();
         
         const waterMat = new THREE.MeshStandardMaterial({ 
-            color: 0x3366aa, 
-            metalness: 0.9, 
-            roughness: 0.2, 
+            color: 0x4488cc, 
+            metalness: 0.8, 
+            roughness: 0.3, 
             transparent: true, 
             opacity: 0.85 
         });
@@ -685,14 +712,14 @@ export class World {
         
         const spawnMarker = new THREE.Mesh(
             new THREE.CylinderGeometry(1.2, 1.5, 0.2, 8),
-            new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x331100 })
+            new THREE.MeshStandardMaterial({ color: 0xcc5500, emissive: 0x331100 })
         );
         spawnMarker.position.set(35, -0.4, 30);
         spawnMarker.castShadow = true;
         this.scene.add(spawnMarker);
         this.objects.push(spawnMarker);
         
-        const markerLight = new THREE.PointLight(0xff6600, 0.5, 15);
+        const markerLight = new THREE.PointLight(0xff6600, 0.4, 15);
         markerLight.position.set(35, 1, 30);
         this.scene.add(markerLight);
         this.objects.push(markerLight);
@@ -704,28 +731,32 @@ export class World {
         if (this.sunLight) this.scene.remove(this.sunLight);
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         
-        this.ambientLight = new THREE.AmbientLight(0x88aadd, 0.45);
+        // Ambient light - сильно приглушенный
+        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.35);
         this.scene.add(this.ambientLight);
         
-        this.sunLight = new THREE.DirectionalLight(0xffeedd, 1.0);
-        this.sunLight.position.set(30, 40, 20);
+        // Солнце - умеренное
+        this.sunLight = new THREE.DirectionalLight(0xffeedd, 0.7);
+        this.sunLight.position.set(30, 30, 20);
         this.sunLight.castShadow = true;
+        this.sunLight.receiveShadow = false;
         this.sunLight.shadow.mapSize.width = 1024;
         this.sunLight.shadow.mapSize.height = 1024;
         this.sunLight.shadow.camera.near = 0.5;
-        this.sunLight.shadow.camera.far = 100;
-        this.sunLight.shadow.camera.left = -30;
-        this.sunLight.shadow.camera.right = 30;
-        this.sunLight.shadow.camera.top = 30;
-        this.sunLight.shadow.camera.bottom = -30;
+        this.sunLight.shadow.camera.far = 80;
+        this.sunLight.shadow.camera.left = -20;
+        this.sunLight.shadow.camera.right = 20;
+        this.sunLight.shadow.camera.top = 20;
+        this.sunLight.shadow.camera.bottom = -20;
         this.scene.add(this.sunLight);
         
-        const fillLight = new THREE.PointLight(0x88aaff, 0.2);
-        fillLight.position.set(0, 10, 0);
+        // Заполняющий свет - слабый теплый
+        const fillLight = new THREE.PointLight(0xccaa88, 0.15);
+        fillLight.position.set(0, 5, 0);
         this.scene.add(fillLight);
         this.objects.push(fillLight);
         
-        console.log('☀️ Освещение настроено');
+        console.log('☀️ Освещение настроено (приглушенное)');
     }
     
     createTreesFromCache() {
@@ -752,6 +783,12 @@ export class World {
                 tree.castShadow = true;
                 tree.receiveShadow = true;
                 tree.visible = false;
+                tree.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
                 
                 this.scene.add(tree);
                 this.objects.push(tree);
@@ -780,8 +817,8 @@ export class World {
     }
     
     createDefaultTreesOptimized() {
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a });
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a });
         
         const treePositions = [];
         for (let i = 0; i < 40; i++) {
@@ -831,19 +868,27 @@ export class World {
             campfireModel.scale.setScalar(scale);
             campfireModel.position.set(0, -0.2, 0);
             campfireModel.castShadow = true;
+            campfireModel.receiveShadow = true;
+            campfireModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
             
             this.scene.add(campfireModel);
             this.objects.push(campfireModel);
             
-            const fireLight = new THREE.PointLight(0xff6600, 0.6, 12);
+            const fireLight = new THREE.PointLight(0xff6600, 0.5, 12);
             fireLight.position.set(0, 0.4, 0);
+            fireLight.castShadow = true;
             this.scene.add(fireLight);
             this.objects.push(fireLight);
             
             const animateFire = () => {
                 requestAnimationFrame(animateFire);
                 if (fireLight.parent) {
-                    fireLight.intensity = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
+                    fireLight.intensity = 0.4 + Math.sin(Date.now() * 0.01) * 0.25;
                 }
             };
             animateFire();
@@ -857,7 +902,7 @@ export class World {
     }
     
     addCampfireStandard() {
-        const logMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3a });
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x7a4a2a });
         const fireMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
         
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x887a6a });
@@ -888,7 +933,7 @@ export class World {
         this.scene.add(fire);
         this.objects.push(fire);
         
-        const light = new THREE.PointLight(0xff4400, 0.6, 12);
+        const light = new THREE.PointLight(0xff4400, 0.5, 12);
         light.position.set(0, 0.4, 0);
         this.scene.add(light);
         this.objects.push(light);
@@ -896,7 +941,7 @@ export class World {
         const animateFire = () => {
             requestAnimationFrame(animateFire);
             if (fire.parent) {
-                const intensity = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
+                const intensity = 0.4 + Math.sin(Date.now() * 0.01) * 0.25;
                 light.intensity = intensity;
                 fire.scale.setScalar(1 + Math.sin(Date.now() * 0.015) * 0.15);
             }
@@ -914,7 +959,14 @@ export class World {
             boatModel.scale.setScalar(scale);
             boatModel.position.set(42, -0.15, 38);
             boatModel.castShadow = true;
+            boatModel.receiveShadow = true;
             boatModel.userData = { isBoat: true };
+            boatModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
             
             boatModel.userData.onInteract = () => {
                 if (window.gameInstance && window.gameInstance.handleInteraction) {
@@ -926,7 +978,7 @@ export class World {
             this.objects.push(boatModel);
             this.interactiveObjects.push(boatModel);
             
-            const boatGlow = new THREE.PointLight(0x44aaff, 0.3, 10);
+            const boatGlow = new THREE.PointLight(0x44aaff, 0.25, 10);
             boatGlow.position.set(42, 0.5, 38);
             this.scene.add(boatGlow);
             this.objects.push(boatGlow);
@@ -943,7 +995,7 @@ export class World {
     
     addBoatStandard() {
         const boatGroup = new THREE.Group();
-        const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+        const boatMat = new THREE.MeshStandardMaterial({ color: 0x7a5a4a });
         const boatBody = new THREE.Mesh(new THREE.BoxGeometry(3, 0.6, 5), boatMat);
         boatBody.castShadow = true;
         boatGroup.add(boatBody);
@@ -954,7 +1006,7 @@ export class World {
         boatFront.castShadow = true;
         boatGroup.add(boatFront);
         
-        const mastMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const mastMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a });
         const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 2.5, 6), mastMat);
         mast.position.set(0, 1.5, 0);
         boatGroup.add(mast);
@@ -981,7 +1033,7 @@ export class World {
     }
     
     addRocks() {
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a, roughness: 0.8 });
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x6a6a5a, roughness: 0.8 });
         for (let i = 0; i < 60; i++) {
             const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), rockMat);
             const angle = Math.random() * Math.PI * 2;
