@@ -6,14 +6,14 @@ import { World } from './src/World.js';
 import { Inventory } from './src/Inventory.js';
 import { StoryManager } from './src/StoryManager.js';
 import { UIManager } from './src/UI.js';
-import { PostProcessing } from './src/PostProcessing.js'; // Добавлено
+import { PostProcessing } from './src/PostProcessing.js';
 
 class Game {
     constructor() {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
-        this.postProcessing = null; // Добавлено
+        this.postProcessing = null;
         this.player = null;
         this.monster = null;
         this.world = null;
@@ -54,7 +54,7 @@ class Game {
         this.setupRenderer();
         
         this.updateLoadingProgress(15, 'Настройка постобработки...');
-        this.setupPostProcessing(); // Добавлено
+        this.setupPostProcessing();
         
         this.updateLoadingProgress(25, 'Создание мира...');
         this.setupWorld();
@@ -224,11 +224,6 @@ class Game {
                 e.preventDefault();
                 this.player.jump();
             }
-            // Нажатие B для включения/выключения постобработки (опционально)
-            if (e.code === 'KeyB' && this.postProcessing) {
-                this.postProcessing.toggleEffects();
-                console.log('Постобработка:', this.postProcessing.effectActive ? 'Вкл' : 'Выкл');
-            }
         });
         
         window.addEventListener('keyup', (e) => {
@@ -356,11 +351,6 @@ class Game {
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             
-            // Усиливаем свечение на острове
-            if (this.postProcessing) {
-                this.postProcessing.setBloomStrength(0.8);
-            }
-            
             setTimeout(() => {
                 if (this.gameActive) {
                     this.ui.showMessage('👹 Вы слышите рычание вдалеке... Монстр приближается!', 4000);
@@ -389,31 +379,72 @@ class Game {
         if (gameUI) gameUI.classList.add('hidden');
     }
     
-    if (this.gamePhase === 'island' && this.gameActive) {
-    const caught = this.monster.update(this.player.position, deltaTime);
-    if (caught) {
-        this.gameOver();
-        return;
-    }
-    
-    const distToMonster = this.player.position.distanceTo(this.monster.position);
-    const monsterStatusElem = document.getElementById('monster-status');
-    if (monsterStatusElem) {
-        if (distToMonster < 5) {
-            monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️';
-            monsterStatusElem.style.color = '#ff0000';
-        } else if (distToMonster < 10) {
-            monsterStatusElem.innerHTML = '🔴 ОПАСНО!';
-            monsterStatusElem.style.color = '#ff6600';
-        } else if (distToMonster < 20) {
-            monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
-            monsterStatusElem.style.color = '#ffaa44';
-        } else {
-            monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
-            monsterStatusElem.style.color = '#44ff44';
+    updateMovement(deltaTime) {
+        const speed = this.player.sprint ? 5.5 : 3.8;
+        const moveDistance = speed * deltaTime;
+        
+        const forward = new THREE.Vector3();
+        const right = new THREE.Vector3();
+        this.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        right.crossVectors(new THREE.Vector3(0, 1, 0), forward);
+        
+        let move = new THREE.Vector3(0, 0, 0);
+        
+        if (this.keys['KeyW']) move.add(forward);
+        if (this.keys['KeyS']) move.sub(forward);
+        if (this.keys['KeyA']) move.sub(right);
+        if (this.keys['KeyD']) move.add(right);
+        
+        if (move.length() > 0) move.normalize();
+        move.multiplyScalar(moveDistance);
+        
+        this.player.position.add(move);
+        
+        const bounds = this.gamePhase === 'basement' 
+            ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 }
+            : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
+        this.player.updatePhysics(deltaTime, bounds);
+        
+        this.camera.position.copy(this.player.position);
+        
+        if (this.world && this.gamePhase === 'island') {
+            this.world.updatePlayerPosition(this.player.position);
         }
-    }
-}
+        
+        if (move.length() > 0.01 && this.player.isGrounded) {
+            const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
+            this.camera.position.y = this.player.position.y + bobAmount;
+        } else {
+            this.camera.position.y = this.player.position.y;
+        }
+        
+        if (this.gamePhase === 'island' && this.gameActive) {
+            const caught = this.monster.update(this.player.position, deltaTime);
+            if (caught) {
+                this.gameOver();
+                return;
+            }
+            
+            const distToMonster = this.player.position.distanceTo(this.monster.position);
+            const monsterStatusElem = document.getElementById('monster-status');
+            if (monsterStatusElem) {
+                if (distToMonster < 5) {
+                    monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️';
+                    monsterStatusElem.style.color = '#ff0000';
+                } else if (distToMonster < 10) {
+                    monsterStatusElem.innerHTML = '🔴 ОПАСНО!';
+                    monsterStatusElem.style.color = '#ff6600';
+                } else if (distToMonster < 20) {
+                    monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
+                    monsterStatusElem.style.color = '#ffaa44';
+                } else {
+                    monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
+                    monsterStatusElem.style.color = '#44ff44';
+                }
+            }
+        }
         
         if (this.gamePhase === 'basement' && this.world.exitDoor) {
             const distToDoor = this.player.position.distanceTo(this.world.exitDoor.position);
@@ -442,7 +473,6 @@ class Game {
             this.updateMovement(deltaTime);
         }
         
-        // Рендер с постобработкой или без
         if (this.postProcessing && this.postProcessing.composer) {
             this.postProcessing.render();
         } else if (this.renderer) {
@@ -501,11 +531,6 @@ class Game {
         this.monster.position.set(35, 0, 30);
         if (this.monster.mesh) {
             this.monster.mesh.position.copy(this.monster.position);
-        }
-        
-        // Устанавливаем нормальное свечение в подвале
-        if (this.postProcessing) {
-            this.postProcessing.setBloomStrength(0.4);
         }
         
         setTimeout(() => {
