@@ -20,7 +20,6 @@ export class World {
         this.sunLight = null;
         this.ambientLight = null;
         
-        // Кэш для загруженных моделей
         this.cachedModels = {
             torch: null,
             key: null,
@@ -115,7 +114,6 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        // Пол
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.7, metalness: 0.1 });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -124,7 +122,6 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Стены
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.6 });
         
         const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
@@ -151,14 +148,12 @@ export class World {
         this.scene.add(rightWall);
         this.basementObjects.push(rightWall);
         
-        // Потолок
         const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
-        // Деревянные балки
         const beamMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         for (let x = -6; x <= 6; x += 4) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 17.5), beamMat);
@@ -167,7 +162,6 @@ export class World {
             this.basementObjects.push(beam);
         }
         
-        // Колонны
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a });
         const pillarPositions = [
             [-5, -0.2, -5], [5, -0.2, -5],
@@ -182,16 +176,10 @@ export class World {
             this.basementObjects.push(pillar);
         });
         
-        // Дверь из GLB
         this.addDoorFromCache();
-        
-        // Бочки
         this.addBarrelsFromCache();
-        
-        // Факелы
         this.addTorchesFromCache();
         
-        // Пьедестал для ключа
         const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
@@ -244,7 +232,6 @@ export class World {
         this.scene.add(this.exitDoor);
         this.basementObjects.push(this.exitDoor);
         
-        // Дверная коробка
         const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
         const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
         frameLeft.position.set(7.35, 1.2, -8.9);
@@ -259,35 +246,51 @@ export class World {
     }
     
     addBarrelsFromCache() {
-    const barrelPositions = [
-        { x: -4, z: 3, rot: 0 },
-        { x: 4, z: 3, rot: 0 },
-        { x: -4, z: -2, rot: 0.5 },
-        { x: 4, z: -2, rot: -0.3 },
-        { x: 0, z: -4, rot: 0.2 },
-        { x: 0, z: 5, rot: -0.2 },
-        { x: -2, z: -5, rot: 0.4 },
-        { x: 2, z: -5, rot: -0.4 }
-    ];
-    
-    const addBarrel = (barrelModel) => {
-        const box = new THREE.Box3().setFromObject(barrelModel);
-        const size = box.getSize(new THREE.Vector3());
-        const maxSize = Math.max(size.x, size.y, size.z);
-        const desiredSize = 0.9; // Было 0.6 - теперь бочки больше
-        const scale = desiredSize / maxSize;
+        const barrelPositions = [
+            { x: -4, z: 3, rot: 0 },
+            { x: 4, z: 3, rot: 0 },
+            { x: -4, z: -2, rot: 0.5 },
+            { x: 4, z: -2, rot: -0.3 },
+            { x: 0, z: -4, rot: 0.2 },
+            { x: 0, z: 5, rot: -0.2 },
+            { x: -2, z: -5, rot: 0.4 },
+            { x: 2, z: -5, rot: -0.4 }
+        ];
         
-        barrelPositions.forEach(pos => {
-            const barrel = barrelModel.clone();
-            barrel.scale.setScalar(scale);
-            barrel.position.set(pos.x, -0.2, pos.z); // Подняли чуть выше
-            barrel.rotation.y = pos.rot;
-            barrel.castShadow = true;
+        const addBarrel = (barrelModel) => {
+            const box = new THREE.Box3().setFromObject(barrelModel);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const desiredSize = 0.9;
+            const scale = desiredSize / maxSize;
             
-            this.scene.add(barrel);
-            this.basementObjects.push(barrel);
-        });
-        console.log(`🛢️ Добавлено ${barrelPositions.length} увеличенных GLB бочек`);
+            barrelPositions.forEach(pos => {
+                const barrel = barrelModel.clone();
+                barrel.scale.setScalar(scale);
+                barrel.position.set(pos.x, -0.2, pos.z);
+                barrel.rotation.y = pos.rot;
+                barrel.castShadow = true;
+                
+                this.scene.add(barrel);
+                this.basementObjects.push(barrel);
+            });
+            console.log(`🛢️ Добавлено ${barrelPositions.length} увеличенных GLB бочек`);
+        };
+        
+        if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+            addBarrel(this.cachedModels.barrel.clone());
+        } else {
+            this.addBarrelsStandard();
+            const checkInterval = setInterval(() => {
+                if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+                    clearInterval(checkInterval);
+                    this.basementObjects.forEach(obj => {
+                        if (obj.isBarrelStandard) this.scene.remove(obj);
+                    });
+                    addBarrel(this.cachedModels.barrel.clone());
+                }
+            }, 100);
+        }
     }
     
     addBarrelsStandard() {
@@ -353,6 +356,15 @@ export class World {
             addTorch(this.cachedModels.torch.clone());
         } else {
             this.addTorchesStandard();
+            const checkInterval = setInterval(() => {
+                if (this.modelsLoaded.torch && this.cachedModels.torch) {
+                    clearInterval(checkInterval);
+                    this.basementObjects.forEach(obj => {
+                        if (obj.isTorchStandard) this.scene.remove(obj);
+                    });
+                    addTorch(this.cachedModels.torch.clone());
+                }
+            }, 100);
         }
     }
     
@@ -367,6 +379,7 @@ export class World {
             const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.8, 6), torchMat);
             torch.position.set(pos[0], pos[1], pos[2]);
             torch.castShadow = true;
+            torch.isTorchStandard = true;
             this.scene.add(torch);
             this.basementObjects.push(torch);
             
@@ -436,6 +449,14 @@ export class World {
             addKey(this.cachedModels.key.clone());
         } else {
             this.createDefaultKey(interactCallback);
+            const checkInterval = setInterval(() => {
+                if (this.modelsLoaded.key && this.cachedModels.key) {
+                    clearInterval(checkInterval);
+                    const oldKey = this.basementObjects.find(obj => obj.userData && obj.userData.isDefaultKey);
+                    if (oldKey) this.scene.remove(oldKey);
+                    addKey(this.cachedModels.key.clone());
+                }
+            }, 100);
         }
     }
     
@@ -634,11 +655,9 @@ export class World {
         if (this.sunLight) this.scene.remove(this.sunLight);
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         
-        // Ambient light - приглушенный
         this.ambientLight = new THREE.AmbientLight(0x88aadd, 0.45);
         this.scene.add(this.ambientLight);
         
-        // Солнце - умеренной яркости
         this.sunLight = new THREE.DirectionalLight(0xffeedd, 1.0);
         this.sunLight.position.set(30, 40, 20);
         this.sunLight.castShadow = true;
@@ -652,13 +671,12 @@ export class World {
         this.sunLight.shadow.camera.bottom = -30;
         this.scene.add(this.sunLight);
         
-        // Заполняющий свет - слабый
         const fillLight = new THREE.PointLight(0x88aaff, 0.2);
         fillLight.position.set(0, 10, 0);
         this.scene.add(fillLight);
         this.objects.push(fillLight);
         
-        console.log('☀️ Освещение настроено (приглушенное)');
+        console.log('☀️ Освещение настроено');
     }
     
     createTreesFromCache() {
@@ -699,6 +717,16 @@ export class World {
             addTrees(this.cachedModels.palm);
         } else {
             this.createDefaultTreesOptimized();
+            const checkInterval = setInterval(() => {
+                if (this.modelsLoaded.palm && this.cachedModels.palm) {
+                    clearInterval(checkInterval);
+                    this.treeInstances.forEach(tree => {
+                        if (tree.parent) this.scene.remove(tree);
+                    });
+                    this.treeInstances = [];
+                    addTrees(this.cachedModels.palm);
+                }
+            }, 100);
         }
     }
     
@@ -832,7 +860,7 @@ export class World {
             const box = new THREE.Box3().setFromObject(boatModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const scale = 1.8 / maxSize; // Увеличиваем масштаб для лодки
+            const scale = 1.8 / maxSize;
             
             boatModel.scale.setScalar(scale);
             boatModel.position.set(42, -0.15, 38);
@@ -949,3 +977,4 @@ export class World {
         this.treeInstances = [];
     }
 }
+            
