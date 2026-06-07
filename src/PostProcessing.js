@@ -2,9 +2,6 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 export class PostProcessing {
     constructor(renderer, scene, camera) {
@@ -13,7 +10,6 @@ export class PostProcessing {
         this.camera = camera;
         this.composer = null;
         this.bloomPass = null;
-        this.filmPass = null;
         this.effectActive = true;
         
         this.init();
@@ -27,32 +23,30 @@ export class PostProcessing {
         const renderPass = new RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
         
-        // Bloom/Glow эффект (свечение)
+        // Bloom/Glow эффект (красивое свечение)
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.6,   // strength - сила свечения
-            0.3,   // radius - радиус
-            0.1    // threshold - порог
+            0.5,   // strength - сила свечения
+            0.4,   // radius - радиус свечения
+            0.2    // threshold - порог (что будет светиться)
         );
+        this.bloomPass.renderToScreen = true;
         this.composer.addPass(this.bloomPass);
         
-        // Film grain эффект (зернистость как в старом кино)
-        this.filmPass = new FilmPass(
-            0.25,   // noise intensity - интенсивность шума
-            0.5,    // scanline intensity - интенсивность строк
-            648,    // scanline count - количество строк
-            false   // grayscale - ч/б
-        );
-        this.filmPass.renderToScreen = true;
-        this.composer.addPass(this.filmPass);
-        
-        console.log('🎬 Постобработка инициализирована');
+        console.log('✨ Постобработка инициализирована (только свечение)');
     }
     
     // Изменение силы свечения
     setBloomStrength(strength) {
         if (this.bloomPass) {
             this.bloomPass.strength = strength;
+        }
+    }
+    
+    // Изменение радиуса свечения
+    setBloomRadius(radius) {
+        if (this.bloomPass) {
+            this.bloomPass.radius = radius;
         }
     }
     
@@ -63,22 +57,13 @@ export class PostProcessing {
         }
     }
     
-    // Изменение интенсивности шума
-    setNoiseIntensity(intensity) {
-        if (this.filmPass) {
-            this.filmPass.uniforms['intensity'].value = intensity;
-        }
-    }
-    
     // Включение/выключение эффектов
     toggleEffects() {
         this.effectActive = !this.effectActive;
         if (this.effectActive) {
-            this.bloomPass.strength = 0.6;
-            this.filmPass.uniforms['intensity'].value = 0.25;
+            this.bloomPass.strength = 0.5;
         } else {
             this.bloomPass.strength = 0;
-            this.filmPass.uniforms['intensity'].value = 0;
         }
     }
     
