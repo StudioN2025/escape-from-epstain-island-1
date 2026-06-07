@@ -389,86 +389,31 @@ class Game {
         if (gameUI) gameUI.classList.add('hidden');
     }
     
-    updateMovement(deltaTime) {
-        const speed = this.player.sprint ? 5.5 : 3.8;
-        const moveDistance = speed * deltaTime;
-        
-        const forward = new THREE.Vector3();
-        const right = new THREE.Vector3();
-        this.camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
-        right.crossVectors(new THREE.Vector3(0, 1, 0), forward);
-        
-        let move = new THREE.Vector3(0, 0, 0);
-        
-        if (this.keys['KeyW']) move.add(forward);
-        if (this.keys['KeyS']) move.sub(forward);
-        if (this.keys['KeyA']) move.sub(right);
-        if (this.keys['KeyD']) move.add(right);
-        
-        if (move.length() > 0) move.normalize();
-        move.multiplyScalar(moveDistance);
-        
-        this.player.position.add(move);
-        
-        const bounds = this.gamePhase === 'basement' 
-            ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 }
-            : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
-        this.player.updatePhysics(deltaTime, bounds);
-        
-        this.camera.position.copy(this.player.position);
-        
-        if (this.world && this.gamePhase === 'island') {
-            this.world.updatePlayerPosition(this.player.position);
-        }
-        
-        if (move.length() > 0.01 && this.player.isGrounded) {
-            const bobAmount = Math.sin(Date.now() * 0.012) * 0.02;
-            this.camera.position.y = this.player.position.y + bobAmount;
+    if (this.gamePhase === 'island' && this.gameActive) {
+    const caught = this.monster.update(this.player.position, deltaTime);
+    if (caught) {
+        this.gameOver();
+        return;
+    }
+    
+    const distToMonster = this.player.position.distanceTo(this.monster.position);
+    const monsterStatusElem = document.getElementById('monster-status');
+    if (monsterStatusElem) {
+        if (distToMonster < 5) {
+            monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️';
+            monsterStatusElem.style.color = '#ff0000';
+        } else if (distToMonster < 10) {
+            monsterStatusElem.innerHTML = '🔴 ОПАСНО!';
+            monsterStatusElem.style.color = '#ff6600';
+        } else if (distToMonster < 20) {
+            monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
+            monsterStatusElem.style.color = '#ffaa44';
         } else {
-            this.camera.position.y = this.player.position.y;
+            monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
+            monsterStatusElem.style.color = '#44ff44';
         }
-        
-        if (this.gamePhase === 'island' && this.gameActive) {
-            const caught = this.monster.update(this.player.position, deltaTime);
-            if (caught) {
-                this.gameOver();
-                return;
-            }
-            
-            const distToMonster = this.player.position.distanceTo(this.monster.position);
-            const monsterStatusElem = document.getElementById('monster-status');
-            if (monsterStatusElem) {
-                if (distToMonster < 5) {
-                    monsterStatusElem.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ОНО РЯДОМ! ⚠️';
-                    monsterStatusElem.style.color = '#ff0000';
-                    monsterStatusElem.style.fontWeight = 'bold';
-                    // Усиливаем свечение при приближении монстра
-                    if (this.postProcessing) {
-                        this.postProcessing.setBloomStrength(1.2);
-                    }
-                } else if (distToMonster < 10) {
-                    monsterStatusElem.innerHTML = '🔴 ОПАСНО! ОНО БЛИЗКО!';
-                    monsterStatusElem.style.color = '#ff6600';
-                    if (this.postProcessing) {
-                        this.postProcessing.setBloomStrength(0.9);
-                    }
-                } else if (distToMonster < 20) {
-                    monsterStatusElem.innerHTML = '🟡 НЕДАЛЕКО';
-                    monsterStatusElem.style.color = '#ffaa44';
-                    if (this.postProcessing) {
-                        this.postProcessing.setBloomStrength(0.7);
-                    }
-                } else {
-                    monsterStatusElem.innerHTML = '🟢 ДАЛЕКО';
-                    monsterStatusElem.style.color = '#44ff44';
-                    if (this.postProcessing) {
-                        this.postProcessing.setBloomStrength(0.6);
-                    }
-                }
-            }
-        }
+    }
+}
         
         if (this.gamePhase === 'basement' && this.world.exitDoor) {
             const distToDoor = this.player.position.distanceTo(this.world.exitDoor.position);
