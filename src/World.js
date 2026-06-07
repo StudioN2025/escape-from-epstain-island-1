@@ -19,6 +19,7 @@ export class World {
         this.playerPosition = new THREE.Vector3(0, 0, 0);
         this.lastUpdateTime = 0;
         this.sunLight = null;
+        this.ambientLight = null;
     }
     
     updatePlayerPosition(position) {
@@ -151,7 +152,6 @@ export class World {
             torchPositions.forEach(pos => {
                 const torch = gltf.scene.clone();
                 
-                // Автоматический расчет масштаба
                 const box = new THREE.Box3().setFromObject(torch);
                 const size = box.getSize(new THREE.Vector3());
                 const maxSize = Math.max(size.x, size.y, size.z);
@@ -164,13 +164,11 @@ export class World {
                 this.scene.add(torch);
                 this.basementObjects.push(torch);
                 
-                // Добавляем свет
                 const light = new THREE.PointLight(0xff6633, 0.6, 8);
                 light.position.set(pos[0], pos[1] + 0.3, pos[2]);
                 this.scene.add(light);
                 this.basementObjects.push(light);
                 
-                // Анимация света
                 const animateLight = () => {
                     requestAnimationFrame(animateLight);
                     if (light.parent) {
@@ -379,8 +377,8 @@ export class World {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
         
-        // Добавляем солнце
-        this.createSun();
+        // НАСТРАИВАЕМ СОЛНЦЕ КАК ИСТОЧНИК СВЕТА
+        this.setupSunLighting();
         
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
@@ -477,50 +475,26 @@ export class World {
         console.log('📍 Остров создан');
     }
     
-    createSun() {
-        // Создаем визуальное солнце
-        const sunGeometry = new THREE.SphereGeometry(2, 64, 64);
-        const sunMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffaa66,
-            emissive: 0xff4422,
-            emissiveIntensity: 1.2,
-            roughness: 0.1,
-            metalness: 0.9
-        });
-        const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
-        sunMesh.position.set(50, 30, -30);
-        sunMesh.castShadow = false;
-        this.scene.add(sunMesh);
-        this.objects.push(sunMesh);
-        
-        // Добавляем свечение вокруг солнца
-        const sunGlowGeometry = new THREE.SphereGeometry(2.5, 32, 32);
-        const sunGlowMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff8844,
-            transparent: true,
-            opacity: 0.3
-        });
-        const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
-        sunMesh.add(sunGlow);
-        
-        // Анимация солнца (медленное движение по небу)
-        const animateSun = () => {
-            requestAnimationFrame(animateSun);
-            const time = Date.now() * 0.0005;
-            // Небольшое движение
-            sunMesh.position.x = 50 + Math.sin(time) * 5;
-            sunMesh.position.z = -30 + Math.cos(time * 0.7) * 5;
-        };
-        animateSun();
-        
-        // Усиливаем направленный свет
+    setupSunLighting() {
+        // Удаляем старый свет если есть
         if (this.sunLight) {
             this.scene.remove(this.sunLight);
         }
+        if (this.ambientLight) {
+            this.scene.remove(this.ambientLight);
+        }
         
-        this.sunLight = new THREE.DirectionalLight(0xffdd99, 1.5);
-        this.sunLight.position.set(50, 30, -30);
+        // Ambient light - рассеянный свет (небо)
+        this.ambientLight = new THREE.AmbientLight(0x88aadd, 0.6);
+        this.scene.add(this.ambientLight);
+        
+        // Основной направленный свет (солнце)
+        this.sunLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+        this.sunLight.position.set(30, 40, 20);
         this.sunLight.castShadow = true;
+        this.sunLight.receiveShadow = false;
+        
+        // Настройка теней
         this.sunLight.shadow.mapSize.width = 2048;
         this.sunLight.shadow.mapSize.height = 2048;
         this.sunLight.shadow.camera.near = 0.5;
@@ -531,7 +505,33 @@ export class World {
         this.sunLight.shadow.camera.bottom = -30;
         this.scene.add(this.sunLight);
         
-        console.log('☀️ Солнце создано');
+        // Добавляем вспомогательный свет для подсветки теней
+        const fillLight = new THREE.PointLight(0x88aaff, 0.3);
+        fillLight.position.set(0, 10, 0);
+        this.scene.add(fillLight);
+        this.objects.push(fillLight);
+        
+        // Добавляем теплый свет сзади
+        const backLight = new THREE.PointLight(0xffaa66, 0.4);
+        backLight.position.set(-20, 15, -30);
+        this.scene.add(backLight);
+        this.objects.push(backLight);
+        
+        console.log('☀️ Солнечное освещение настроено');
+        
+        // Анимация движения солнца (опционально)
+        let time = 0;
+        const animateSun = () => {
+            requestAnimationFrame(animateSun);
+            time += 0.002;
+            // Солнце движется по дуге
+            const x = Math.cos(time) * 40;
+            const z = Math.sin(time) * 30;
+            const y = 25 + Math.sin(time) * 15;
+            this.sunLight.position.set(x, y, z);
+        };
+        // Раскомментировать если нужно движущееся солнце
+        // animateSun();
     }
     
     loadCampfireGLB() {
@@ -553,13 +553,11 @@ export class World {
             this.scene.add(campfire);
             this.objects.push(campfire);
             
-            // Добавляем свет от костра
             const fireLight = new THREE.PointLight(0xff6600, 0.8, 15);
             fireLight.position.set(0, 0.5, 0);
             this.scene.add(fireLight);
             this.objects.push(fireLight);
             
-            // Анимация света
             const animateFire = () => {
                 requestAnimationFrame(animateFire);
                 if (fireLight.parent) {
@@ -653,7 +651,6 @@ export class World {
             this.objects.push(boat);
             this.interactiveObjects.push(boat);
             
-            // Добавляем свечение вокруг лодки
             const boatGlow = new THREE.PointLight(0x44aaff, 0.5, 12);
             boatGlow.position.set(42, 0.5, 38);
             this.scene.add(boatGlow);
