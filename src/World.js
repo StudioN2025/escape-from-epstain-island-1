@@ -725,11 +725,11 @@ export class World {
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         
         // Ambient light - очень приглушенный
-        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.25);
+        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.1);
         this.scene.add(this.ambientLight);
         
         // Солнце - мягкое
-        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.55);
+        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.25);
         this.sunLight.position.set(30, 30, 20);
         this.sunLight.castShadow = true;
         this.sunLight.receiveShadow = false;
@@ -744,19 +744,19 @@ export class World {
         this.scene.add(this.sunLight);
         
         // Холодный заполняющий свет
-        const skyLight = new THREE.PointLight(0x88aaff, 0.1);
+        const skyLight = new THREE.PointLight(0x88aaff, 0.05);
         skyLight.position.set(0, 15, 0);
         this.scene.add(skyLight);
         this.objects.push(skyLight);
         
         // Теплый свет снизу
-        const groundLight = new THREE.PointLight(0xccaa88, 0.08);
+        const groundLight = new THREE.PointLight(0xccaa88, 0.04);
         groundLight.position.set(0, -1, 0);
         this.scene.add(groundLight);
         this.objects.push(groundLight);
         
         // Контровой свет
-        const backLight = new THREE.DirectionalLight(0xffaa88, 0.12);
+        const backLight = new THREE.DirectionalLight(0xffaa88, 0.6);
         backLight.position.set(-15, 20, -20);
         this.scene.add(backLight);
         this.objects.push(backLight);
@@ -766,7 +766,7 @@ export class World {
     
     createTreesFromCache() {
         const treePositions = [];
-        for (let i = 0; i < 40; i++) {
+        for (let i = 0; i < 60; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 10 + Math.random() * 38;
             const x = Math.cos(angle) * radius;
