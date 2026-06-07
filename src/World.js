@@ -154,7 +154,6 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        // Пол с текстурой - приглушенный
         const floorMat = new THREE.MeshStandardMaterial({ map: this.textures.laminate, roughness: 0.6, metalness: 0.05, color: 0xffffff });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -163,7 +162,6 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Стены - более темные
         const wallMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoWall, roughness: 0.7, color: 0x888888 });
         
         const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
@@ -190,14 +188,12 @@ export class World {
         this.scene.add(rightWall);
         this.basementObjects.push(rightWall);
         
-        // Потолок
         const ceilingMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoCeiling, roughness: 0.8, color: 0x999999 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
-        // Деревянные балки
         const beamMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a, roughness: 0.5 });
         for (let x = -6; x <= 6; x += 4) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 17.5), beamMat);
@@ -207,7 +203,6 @@ export class World {
             this.basementObjects.push(beam);
         }
         
-        // Колонны
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.5 });
         const pillarPositions = [
             [-5, -0.2, -5], [5, -0.2, -5],
@@ -403,7 +398,7 @@ export class World {
                 this.scene.add(torch);
                 this.basementObjects.push(torch);
                 
-                const light = new THREE.PointLight(0xff6633, 0.35, 7);
+                const light = new THREE.PointLight(0xff6633, 0.3, 7);
                 light.position.set(pos[0], pos[1] + 0.2, pos[2]);
                 light.castShadow = true;
                 this.scene.add(light);
@@ -412,7 +407,7 @@ export class World {
                 const animateLight = () => {
                     requestAnimationFrame(animateLight);
                     if (light.parent) {
-                        light.intensity = 0.25 + Math.sin(Date.now() * 0.008) * 0.12;
+                        light.intensity = 0.2 + Math.sin(Date.now() * 0.008) * 0.1;
                     }
                 };
                 animateLight();
@@ -456,7 +451,7 @@ export class World {
             this.scene.add(flame);
             this.basementObjects.push(flame);
             
-            const light = new THREE.PointLight(0xff6633, 0.3, 6);
+            const light = new THREE.PointLight(0xff6633, 0.25, 6);
             light.position.set(pos[0], pos[1] + 0.3, pos[2]);
             this.scene.add(light);
             this.basementObjects.push(light);
@@ -505,7 +500,7 @@ export class World {
             };
             animateKey();
             
-            const glowLight = new THREE.PointLight(0xffaa44, 0.25, 3);
+            const glowLight = new THREE.PointLight(0xffaa44, 0.2, 3);
             glowLight.position.set(-3, 0.3, 4);
             this.scene.add(glowLight);
             this.basementObjects.push(glowLight);
@@ -513,7 +508,7 @@ export class World {
             const animateLight = () => {
                 requestAnimationFrame(animateLight);
                 if (glowLight.parent) {
-                    glowLight.intensity = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
+                    glowLight.intensity = 0.12 + Math.sin(Date.now() * 0.005) * 0.08;
                 }
             };
             animateLight();
@@ -565,7 +560,7 @@ export class World {
         this.basementObjects.push(keyGroup);
         this.interactiveObjects.push(keyGroup);
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.25, 3);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.2, 3);
         glowLight.position.set(-3, 0.35, 4);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
@@ -575,7 +570,7 @@ export class World {
             if (keyGroup.parent) {
                 keyGroup.position.y = 0.15 + Math.sin(Date.now() * 0.003) * 0.05;
                 keyGroup.rotation.y += 0.02;
-                glowLight.intensity = 0.15 + Math.sin(Date.now() * 0.005) * 0.1;
+                glowLight.intensity = 0.12 + Math.sin(Date.now() * 0.005) * 0.08;
             }
         };
         animateKey();
@@ -593,7 +588,7 @@ export class World {
             this.interactiveObjects.push(this.exitDoor);
         }
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.3, 4);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.25, 4);
         if (this.exitDoor) {
             glowLight.position.copy(this.exitDoor.position);
         } else {
@@ -605,7 +600,7 @@ export class World {
         const animateGlow = () => {
             requestAnimationFrame(animateGlow);
             if (glowLight.parent) {
-                glowLight.intensity = 0.2 + Math.sin(Date.now() * 0.004) * 0.15;
+                glowLight.intensity = 0.15 + Math.sin(Date.now() * 0.004) * 0.1;
             }
         };
         animateGlow();
@@ -630,7 +625,6 @@ export class World {
         
         this.setupSunLighting();
         
-        // Земля - темнее
         const groundMat = new THREE.MeshStandardMaterial({ map: this.textures.grass, roughness: 0.9, color: 0x88aa66 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -639,7 +633,6 @@ export class World {
         this.scene.add(ground);
         this.objects.push(ground);
         
-        // Песок - приглушенный
         const sandMat = new THREE.MeshStandardMaterial({ map: this.textures.sand, roughness: 0.8, color: 0xccaa88 });
         const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
         sandRing.rotation.x = -Math.PI / 2;
@@ -719,7 +712,7 @@ export class World {
         this.scene.add(spawnMarker);
         this.objects.push(spawnMarker);
         
-        const markerLight = new THREE.PointLight(0xff6600, 0.4, 15);
+        const markerLight = new THREE.PointLight(0xff6600, 0.35, 15);
         markerLight.position.set(35, 1, 30);
         this.scene.add(markerLight);
         this.objects.push(markerLight);
@@ -731,12 +724,12 @@ export class World {
         if (this.sunLight) this.scene.remove(this.sunLight);
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         
-        // Ambient light - сильно приглушенный
-        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.35);
+        // Ambient light - очень приглушенный
+        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.25);
         this.scene.add(this.ambientLight);
         
-        // Солнце - умеренное
-        this.sunLight = new THREE.DirectionalLight(0xffeedd, 0.7);
+        // Солнце - мягкое
+        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.55);
         this.sunLight.position.set(30, 30, 20);
         this.sunLight.castShadow = true;
         this.sunLight.receiveShadow = false;
@@ -744,19 +737,31 @@ export class World {
         this.sunLight.shadow.mapSize.height = 1024;
         this.sunLight.shadow.camera.near = 0.5;
         this.sunLight.shadow.camera.far = 80;
-        this.sunLight.shadow.camera.left = -20;
-        this.sunLight.shadow.camera.right = 20;
-        this.sunLight.shadow.camera.top = 20;
-        this.sunLight.shadow.camera.bottom = -20;
+        this.sunLight.shadow.camera.left = -25;
+        this.sunLight.shadow.camera.right = 25;
+        this.sunLight.shadow.camera.top = 25;
+        this.sunLight.shadow.camera.bottom = -25;
         this.scene.add(this.sunLight);
         
-        // Заполняющий свет - слабый теплый
-        const fillLight = new THREE.PointLight(0xccaa88, 0.15);
-        fillLight.position.set(0, 5, 0);
-        this.scene.add(fillLight);
-        this.objects.push(fillLight);
+        // Холодный заполняющий свет
+        const skyLight = new THREE.PointLight(0x88aaff, 0.1);
+        skyLight.position.set(0, 15, 0);
+        this.scene.add(skyLight);
+        this.objects.push(skyLight);
         
-        console.log('☀️ Освещение настроено (приглушенное)');
+        // Теплый свет снизу
+        const groundLight = new THREE.PointLight(0xccaa88, 0.08);
+        groundLight.position.set(0, -1, 0);
+        this.scene.add(groundLight);
+        this.objects.push(groundLight);
+        
+        // Контровой свет
+        const backLight = new THREE.DirectionalLight(0xffaa88, 0.12);
+        backLight.position.set(-15, 20, -20);
+        this.scene.add(backLight);
+        this.objects.push(backLight);
+        
+        console.log('🌙 Приглушенное освещение настроено');
     }
     
     createTreesFromCache() {
@@ -879,7 +884,7 @@ export class World {
             this.scene.add(campfireModel);
             this.objects.push(campfireModel);
             
-            const fireLight = new THREE.PointLight(0xff6600, 0.5, 12);
+            const fireLight = new THREE.PointLight(0xff6600, 0.45, 12);
             fireLight.position.set(0, 0.4, 0);
             fireLight.castShadow = true;
             this.scene.add(fireLight);
@@ -888,7 +893,7 @@ export class World {
             const animateFire = () => {
                 requestAnimationFrame(animateFire);
                 if (fireLight.parent) {
-                    fireLight.intensity = 0.4 + Math.sin(Date.now() * 0.01) * 0.25;
+                    fireLight.intensity = 0.35 + Math.sin(Date.now() * 0.01) * 0.2;
                 }
             };
             animateFire();
@@ -933,7 +938,7 @@ export class World {
         this.scene.add(fire);
         this.objects.push(fire);
         
-        const light = new THREE.PointLight(0xff4400, 0.5, 12);
+        const light = new THREE.PointLight(0xff4400, 0.45, 12);
         light.position.set(0, 0.4, 0);
         this.scene.add(light);
         this.objects.push(light);
@@ -941,7 +946,7 @@ export class World {
         const animateFire = () => {
             requestAnimationFrame(animateFire);
             if (fire.parent) {
-                const intensity = 0.4 + Math.sin(Date.now() * 0.01) * 0.25;
+                const intensity = 0.35 + Math.sin(Date.now() * 0.01) * 0.2;
                 light.intensity = intensity;
                 fire.scale.setScalar(1 + Math.sin(Date.now() * 0.015) * 0.15);
             }
@@ -978,7 +983,7 @@ export class World {
             this.objects.push(boatModel);
             this.interactiveObjects.push(boatModel);
             
-            const boatGlow = new THREE.PointLight(0x44aaff, 0.25, 10);
+            const boatGlow = new THREE.PointLight(0x44aaff, 0.2, 10);
             boatGlow.position.set(42, 0.5, 38);
             this.scene.add(boatGlow);
             this.objects.push(boatGlow);
