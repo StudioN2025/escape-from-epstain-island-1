@@ -724,13 +724,13 @@ export class World {
     if (this.sunLight) this.scene.remove(this.sunLight);
     if (this.ambientLight) this.scene.remove(this.ambientLight);
     
-    // Ambient light - минимальный, едва видно
-    this.ambientLight = new THREE.AmbientLight(0x445566, 0.12);
+    // Ambient light - практически отсутствует
+    this.ambientLight = new THREE.AmbientLight(0x334455, 0.06);
     this.scene.add(this.ambientLight);
     
-    // Солнце - очень тусклое, как в пасмурный день
-    this.sunLight = new THREE.DirectionalLight(0xccaa88, 0.28);
-    this.sunLight.position.set(30, 25, 20);
+    // Солнце - едва светит
+    this.sunLight = new THREE.DirectionalLight(0xaa8866, 0.15);
+    this.sunLight.position.set(30, 20, 20);
     this.sunLight.castShadow = true;
     this.sunLight.receiveShadow = false;
     this.sunLight.shadow.mapSize.width = 1024;
@@ -743,25 +743,25 @@ export class World {
     this.sunLight.shadow.camera.bottom = -25;
     this.scene.add(this.sunLight);
     
-    // Холодный заполняющий свет - едва заметный
-    const skyLight = new THREE.PointLight(0x6688aa, 0.06);
+    // Заполняющий свет - почти выключен
+    const skyLight = new THREE.PointLight(0x446688, 0.03);
     skyLight.position.set(0, 15, 0);
     this.scene.add(skyLight);
     this.objects.push(skyLight);
     
-    // Теплый свет снизу - минимальный
-    const groundLight = new THREE.PointLight(0x886644, 0.04);
+    // Снизу ничего не светит
+    const groundLight = new THREE.PointLight(0x664422, 0.02);
     groundLight.position.set(0, -1, 0);
     this.scene.add(groundLight);
     this.objects.push(groundLight);
     
-    // Контровой свет сзади - почти отсутствует
-    const backLight = new THREE.DirectionalLight(0x886655, 0.06);
+    // Контровой свет
+    const backLight = new THREE.DirectionalLight(0x664433, 0.04);
     backLight.position.set(-15, 20, -20);
     this.scene.add(backLight);
     this.objects.push(backLight);
     
-    console.log('🌑 Тёмное освещение настроено (хоррор-режим)');
+    console.log('🌚 Экстремально тёмное освещение (почти полная темнота)');
 }
     createTreesFromCache() {
         const treePositions = [];
