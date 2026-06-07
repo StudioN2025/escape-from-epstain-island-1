@@ -259,51 +259,35 @@ export class World {
     }
     
     addBarrelsFromCache() {
-        const barrelPositions = [
-            { x: -4, z: 3, rot: 0 },
-            { x: 4, z: 3, rot: 0 },
-            { x: -4, z: -2, rot: 0.5 },
-            { x: 4, z: -2, rot: -0.3 },
-            { x: 0, z: -4, rot: 0.2 },
-            { x: 0, z: 5, rot: -0.2 },
-            { x: -2, z: -5, rot: 0.4 },
-            { x: 2, z: -5, rot: -0.4 }
-        ];
+    const barrelPositions = [
+        { x: -4, z: 3, rot: 0 },
+        { x: 4, z: 3, rot: 0 },
+        { x: -4, z: -2, rot: 0.5 },
+        { x: 4, z: -2, rot: -0.3 },
+        { x: 0, z: -4, rot: 0.2 },
+        { x: 0, z: 5, rot: -0.2 },
+        { x: -2, z: -5, rot: 0.4 },
+        { x: 2, z: -5, rot: -0.4 }
+    ];
+    
+    const addBarrel = (barrelModel) => {
+        const box = new THREE.Box3().setFromObject(barrelModel);
+        const size = box.getSize(new THREE.Vector3());
+        const maxSize = Math.max(size.x, size.y, size.z);
+        const desiredSize = 0.9; // Было 0.6 - теперь бочки больше
+        const scale = desiredSize / maxSize;
         
-        const addBarrel = (barrelModel) => {
-            const box = new THREE.Box3().setFromObject(barrelModel);
-            const size = box.getSize(new THREE.Vector3());
-            const maxSize = Math.max(size.x, size.y, size.z);
-            const desiredSize = 0.6;
-            const scale = desiredSize / maxSize;
+        barrelPositions.forEach(pos => {
+            const barrel = barrelModel.clone();
+            barrel.scale.setScalar(scale);
+            barrel.position.set(pos.x, -0.2, pos.z); // Подняли чуть выше
+            barrel.rotation.y = pos.rot;
+            barrel.castShadow = true;
             
-            barrelPositions.forEach(pos => {
-                const barrel = barrelModel.clone();
-                barrel.scale.setScalar(scale);
-                barrel.position.set(pos.x, -0.25, pos.z);
-                barrel.rotation.y = pos.rot;
-                barrel.castShadow = true;
-                
-                this.scene.add(barrel);
-                this.basementObjects.push(barrel);
-            });
-            console.log(`🛢️ Добавлено ${barrelPositions.length} GLB бочек`);
-        };
-        
-        if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
-            addBarrel(this.cachedModels.barrel.clone());
-        } else {
-            this.addBarrelsStandard();
-            const checkInterval = setInterval(() => {
-                if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
-                    clearInterval(checkInterval);
-                    this.basementObjects.forEach(obj => {
-                        if (obj.isBarrelStandard) this.scene.remove(obj);
-                    });
-                    addBarrel(this.cachedModels.barrel.clone());
-                }
-            }, 100);
-        }
+            this.scene.add(barrel);
+            this.basementObjects.push(barrel);
+        });
+        console.log(`🛢️ Добавлено ${barrelPositions.length} увеличенных GLB бочек`);
     }
     
     addBarrelsStandard() {
