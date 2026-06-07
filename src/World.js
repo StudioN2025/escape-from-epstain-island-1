@@ -26,21 +26,24 @@ export class World {
             key: null,
             palm: null,
             campfire: null,
-            boat: null
+            boat: null,
+            barrel: null
         };
         this.modelsLoading = {
             torch: false,
             key: false,
             palm: false,
             campfire: false,
-            boat: false
+            boat: false,
+            barrel: false
         };
         this.modelsLoaded = {
             torch: false,
             key: false,
             palm: false,
             campfire: false,
-            boat: false
+            boat: false,
+            barrel: false
         };
         
         this.preloadAllModels();
@@ -53,6 +56,7 @@ export class World {
         this.preloadModel('palm', 'assets/models/date_palm.glb');
         this.preloadModel('campfire', 'assets/models/campfire.glb');
         this.preloadModel('boat', 'assets/models/wooden_boat.glb');
+        this.preloadModel('barrel', 'assets/models/old_barrel_free_download.glb');
     }
     
     preloadModel(name, path) {
@@ -107,7 +111,7 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        // ПОЛ - сплошной без щелей
+        // Пол - сплошной без щелей
         const floorMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.7, metalness: 0.1 });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
@@ -116,31 +120,27 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Стены - прилегают к полу без щелей
+        // Стены
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.6 });
         
-        // Задняя стена (Z = -9)
         const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
         backWall.position.set(0, 1.25, -9);
         backWall.receiveShadow = true;
         this.scene.add(backWall);
         this.basementObjects.push(backWall);
         
-        // Передняя стена (Z = 9)
         const frontWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
         frontWall.position.set(0, 1.25, 9);
         frontWall.receiveShadow = true;
         this.scene.add(frontWall);
         this.basementObjects.push(frontWall);
         
-        // Левая стена (X = -9)
         const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.5, 18), wallMat);
         leftWall.position.set(-9, 1.25, 0);
         leftWall.receiveShadow = true;
         this.scene.add(leftWall);
         this.basementObjects.push(leftWall);
         
-        // Правая стена (X = 9)
         const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.5, 18), wallMat);
         rightWall.position.set(9, 1.25, 0);
         rightWall.receiveShadow = true;
@@ -154,7 +154,7 @@ export class World {
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
-        // Деревянные балки на потолке
+        // Деревянные балки
         const beamMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         for (let x = -6; x <= 6; x += 4) {
             const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 17.5), beamMat);
@@ -199,13 +199,13 @@ export class World {
         this.scene.add(frameTop);
         this.basementObjects.push(frameLeft, frameRight, frameTop);
         
-        // Бочки на полу (не в воздухе)
-        this.addBarrels();
+        // Бочки из GLB
+        this.addBarrelsFromCache();
         
         // Факелы на стенах
         this.addTorchesFromCache();
         
-        // Пьедестал для ключа на полу
+        // Пьедестал для ключа
         const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
@@ -214,25 +214,75 @@ export class World {
         this.basementObjects.push(pedestal);
     }
     
-    addBarrels() {
+    addBarrelsFromCache() {
+        const barrelPositions = [
+            { x: -4, z: 3, rot: 0 },
+            { x: 4, z: 3, rot: 0 },
+            { x: -4, z: -2, rot: 0.5 },
+            { x: 4, z: -2, rot: -0.3 },
+            { x: 0, z: -4, rot: 0.2 },
+            { x: 0, z: 5, rot: -0.2 },
+            { x: -2, z: -5, rot: 0.4 },
+            { x: 2, z: -5, rot: -0.4 }
+        ];
+        
+        const addBarrel = (barrelModel) => {
+            const box = new THREE.Box3().setFromObject(barrelModel);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const desiredSize = 0.6;
+            const scale = desiredSize / maxSize;
+            
+            barrelPositions.forEach(pos => {
+                const barrel = barrelModel.clone();
+                barrel.scale.setScalar(scale);
+                barrel.position.set(pos.x, -0.25, pos.z);
+                barrel.rotation.y = pos.rot;
+                barrel.castShadow = true;
+                barrel.receiveShadow = true;
+                
+                this.scene.add(barrel);
+                this.basementObjects.push(barrel);
+            });
+            console.log(`🛢️ Добавлено ${barrelPositions.length} GLB бочек в подвал`);
+        };
+        
+        if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+            addBarrel(this.cachedModels.barrel.clone());
+        } else {
+            this.addBarrelsStandard();
+            const checkInterval = setInterval(() => {
+                if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+                    clearInterval(checkInterval);
+                    // Удаляем стандартные бочки
+                    this.basementObjects.forEach(obj => {
+                        if (obj.isBarrelStandard) this.scene.remove(obj);
+                    });
+                    addBarrel(this.cachedModels.barrel.clone());
+                }
+            }, 100);
+        }
+    }
+    
+    addBarrelsStandard() {
         const barrelMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
-        // Бочки на полу - Y = -0.5 + высота/2 = -0.5 + 0.4 = -0.1
         const positions = [
             [-4, -0.1, 3], [4, -0.1, 3],
             [-4, -0.1, -2], [4, -0.1, -2],
-            [0, -0.1, -4], [0, -0.1, 5]
+            [0, -0.1, -4], [0, -0.1, 5],
+            [-2, -0.1, -5], [2, -0.1, -5]
         ];
         positions.forEach(pos => {
             const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.55, 0.8, 8), barrelMat);
             barrel.position.set(pos[0], pos[1], pos[2]);
             barrel.castShadow = true;
+            barrel.isBarrelStandard = true;
             this.scene.add(barrel);
             this.basementObjects.push(barrel);
         });
     }
     
     addTorchesFromCache() {
-        // Факелы на стенах на высоте 1.5м
         const torchPositions = [
             [-8.7, 1.5, -6], [8.7, 1.5, -6],
             [-8.7, 1.5, 6], [8.7, 1.5, 6]
@@ -251,7 +301,6 @@ export class World {
                 torch.position.set(pos[0], pos[1], pos[2]);
                 torch.castShadow = true;
                 
-                // Поворот факела к стене
                 if (Math.abs(pos[0]) > 8) {
                     torch.rotation.y = pos[0] > 0 ? -Math.PI / 2 : Math.PI / 2;
                 }
@@ -281,7 +330,6 @@ export class World {
             const checkInterval = setInterval(() => {
                 if (this.modelsLoaded.torch && this.cachedModels.torch) {
                     clearInterval(checkInterval);
-                    // Удаляем стандартные
                     this.basementObjects.forEach(obj => {
                         if (obj.isTorchStandard) this.scene.remove(obj);
                     });
@@ -320,7 +368,6 @@ export class World {
     }
     
     createInteractiveObjects(interactCallback) {
-        // Ключ на пьедестале
         const addKey = (keyModel) => {
             const box = new THREE.Box3().setFromObject(keyModel);
             const size = box.getSize(new THREE.Vector3());
