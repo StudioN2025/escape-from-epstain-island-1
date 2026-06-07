@@ -20,6 +20,15 @@ export class World {
         this.sunLight = null;
         this.ambientLight = null;
         
+        // Текстуры
+        this.textures = {
+            stuccoWall: null,
+            stuccoCeiling: null,
+            sand: null,
+            grass: null,
+            laminate: null
+        };
+        
         this.cachedModels = {
             torch: null,
             key: null,
@@ -49,135 +58,39 @@ export class World {
         };
         
         this.preloadAllModels();
-        this.createTextures();
+        this.loadTextures();
     }
     
-    createTextures() {
-        // Текстура для стен подвала (каменная кладка)
-        const stoneCanvas = document.createElement('canvas');
-        stoneCanvas.width = 512;
-        stoneCanvas.height = 512;
-        const stoneCtx = stoneCanvas.getContext('2d');
+    loadTextures() {
+        const textureLoader = new THREE.TextureLoader();
         
-        stoneCtx.fillStyle = '#5a4a3a';
-        stoneCtx.fillRect(0, 0, 512, 512);
+        // Загрузка текстур
+        this.textures.stuccoWall = textureLoader.load('assets/textures/stucco-5.jpg');
+        this.textures.stuccoWall.wrapS = THREE.RepeatWrapping;
+        this.textures.stuccoWall.wrapT = THREE.RepeatWrapping;
+        this.textures.stuccoWall.repeat.set(4, 3);
         
-        // Рисуем камни
-        stoneCtx.strokeStyle = '#3a2a1a';
-        stoneCtx.lineWidth = 3;
-        for (let i = 0; i < 200; i++) {
-            const x = Math.random() * 512;
-            const y = Math.random() * 512;
-            const w = 30 + Math.random() * 50;
-            const h = 20 + Math.random() * 35;
-            stoneCtx.strokeRect(x, y, w, h);
-            stoneCtx.fillStyle = `rgba(80, 60, 40, ${0.3 + Math.random() * 0.4})`;
-            stoneCtx.fillRect(x, y, w, h);
-        }
+        this.textures.stuccoCeiling = textureLoader.load('assets/textures/stucco-9.jpg');
+        this.textures.stuccoCeiling.wrapS = THREE.RepeatWrapping;
+        this.textures.stuccoCeiling.wrapT = THREE.RepeatWrapping;
+        this.textures.stuccoCeiling.repeat.set(3, 3);
         
-        this.stoneTexture = new THREE.CanvasTexture(stoneCanvas);
-        this.stoneTexture.wrapS = THREE.RepeatWrapping;
-        this.stoneTexture.wrapT = THREE.RepeatWrapping;
-        this.stoneTexture.repeat.set(4, 3);
+        this.textures.sand = textureLoader.load('assets/textures/sand-1.jpg');
+        this.textures.sand.wrapS = THREE.RepeatWrapping;
+        this.textures.sand.wrapT = THREE.RepeatWrapping;
+        this.textures.sand.repeat.set(6, 6);
         
-        // Текстура для пола подвала (деревянные доски)
-        const woodCanvas = document.createElement('canvas');
-        woodCanvas.width = 512;
-        woodCanvas.height = 512;
-        const woodCtx = woodCanvas.getContext('2d');
+        this.textures.grass = textureLoader.load('assets/textures/grass-2.jpg');
+        this.textures.grass.wrapS = THREE.RepeatWrapping;
+        this.textures.grass.wrapT = THREE.RepeatWrapping;
+        this.textures.grass.repeat.set(8, 8);
         
-        woodCtx.fillStyle = '#4a3a2a';
-        woodCtx.fillRect(0, 0, 512, 512);
+        this.textures.laminate = textureLoader.load('assets/textures/laminate-2.jpg');
+        this.textures.laminate.wrapS = THREE.RepeatWrapping;
+        this.textures.laminate.wrapT = THREE.RepeatWrapping;
+        this.textures.laminate.repeat.set(4, 4);
         
-        // Рисуем доски
-        woodCtx.strokeStyle = '#2a1a0a';
-        woodCtx.lineWidth = 4;
-        for (let i = 0; i < 20; i++) {
-            const y = i * 50;
-            woodCtx.beginPath();
-            woodCtx.moveTo(0, y);
-            woodCtx.lineTo(512, y);
-            woodCtx.stroke();
-            
-            // Добавляем текстуру дерева
-            for (let j = 0; j < 30; j++) {
-                woodCtx.beginPath();
-                woodCtx.moveTo(Math.random() * 512, y + Math.random() * 48);
-                woodCtx.lineTo(Math.random() * 512, y + Math.random() * 48);
-                woodCtx.strokeStyle = `rgba(30, 20, 10, ${0.5 + Math.random() * 0.3})`;
-                woodCtx.stroke();
-            }
-        }
-        
-        this.woodFloorTexture = new THREE.CanvasTexture(woodCanvas);
-        this.woodFloorTexture.wrapS = THREE.RepeatWrapping;
-        this.woodFloorTexture.wrapT = THREE.RepeatWrapping;
-        this.woodFloorTexture.repeat.set(4, 4);
-        
-        // Текстура для потолка
-        const ceilingCanvas = document.createElement('canvas');
-        ceilingCanvas.width = 512;
-        ceilingCanvas.height = 512;
-        const ceilingCtx = ceilingCanvas.getContext('2d');
-        
-        ceilingCtx.fillStyle = '#3a2a1a';
-        ceilingCtx.fillRect(0, 0, 512, 512);
-        
-        // Добавляем балки
-        ceilingCtx.fillStyle = '#5a4a3a';
-        for (let i = 0; i < 15; i++) {
-            ceilingCtx.fillRect(i * 80, 0, 20, 512);
-        }
-        
-        this.ceilingTexture = new THREE.CanvasTexture(ceilingCanvas);
-        this.ceilingTexture.wrapS = THREE.RepeatWrapping;
-        this.ceilingTexture.wrapT = THREE.RepeatWrapping;
-        this.ceilingTexture.repeat.set(3, 3);
-        
-        // Текстура для земли на острове (трава с песком)
-        const grassCanvas = document.createElement('canvas');
-        grassCanvas.width = 512;
-        grassCanvas.height = 512;
-        const grassCtx = grassCanvas.getContext('2d');
-        
-        grassCtx.fillStyle = '#5a8a3a';
-        grassCtx.fillRect(0, 0, 512, 512);
-        
-        // Добавляем пятна травы и песка
-        for (let i = 0; i < 1000; i++) {
-            grassCtx.fillStyle = `rgba(80, 120, 50, ${0.3 + Math.random() * 0.5})`;
-            grassCtx.fillRect(Math.random() * 512, Math.random() * 512, 3, 3);
-        }
-        for (let i = 0; i < 500; i++) {
-            grassCtx.fillStyle = `rgba(180, 150, 80, ${0.2 + Math.random() * 0.4})`;
-            grassCtx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
-        }
-        
-        this.grassTexture = new THREE.CanvasTexture(grassCanvas);
-        this.grassTexture.wrapS = THREE.RepeatWrapping;
-        this.grassTexture.wrapT = THREE.RepeatWrapping;
-        this.grassTexture.repeat.set(8, 8);
-        
-        // Текстура для песка
-        const sandCanvas = document.createElement('canvas');
-        sandCanvas.width = 512;
-        sandCanvas.height = 512;
-        const sandCtx = sandCanvas.getContext('2d');
-        
-        sandCtx.fillStyle = '#ddbb77';
-        sandCtx.fillRect(0, 0, 512, 512);
-        
-        for (let i = 0; i < 2000; i++) {
-            sandCtx.fillStyle = `rgba(200, 170, 100, ${0.2 + Math.random() * 0.5})`;
-            sandCtx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
-        }
-        
-        this.sandTexture = new THREE.CanvasTexture(sandCanvas);
-        this.sandTexture.wrapS = THREE.RepeatWrapping;
-        this.sandTexture.wrapT = THREE.RepeatWrapping;
-        this.sandTexture.repeat.set(6, 6);
-        
-        console.log('🎨 Текстуры созданы');
+        console.log('🎨 Текстуры загружены');
     }
     
     preloadAllModels() {
@@ -243,8 +156,8 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        // Пол с текстурой дерева
-        const floorMat = new THREE.MeshStandardMaterial({ map: this.woodFloorTexture, roughness: 0.7, metalness: 0.1 });
+        // Пол с текстурой ламината
+        const floorMat = new THREE.MeshStandardMaterial({ map: this.textures.laminate, roughness: 0.4, metalness: 0.05 });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.5;
@@ -252,8 +165,8 @@ export class World {
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        // Стены с текстурой камня
-        const wallMat = new THREE.MeshStandardMaterial({ map: this.stoneTexture, roughness: 0.6 });
+        // Стены с текстурой stucco-5
+        const wallMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoWall, roughness: 0.5 });
         
         const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
         backWall.position.set(0, 1.25, -9);
@@ -279,8 +192,8 @@ export class World {
         this.scene.add(rightWall);
         this.basementObjects.push(rightWall);
         
-        // Потолок с текстурой
-        const ceilingMat = new THREE.MeshStandardMaterial({ map: this.ceilingTexture, roughness: 0.8 });
+        // Потолок с текстурой stucco-9
+        const ceilingMat = new THREE.MeshStandardMaterial({ map: this.textures.stuccoCeiling, roughness: 0.6 });
         const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
@@ -690,8 +603,8 @@ export class World {
         
         this.setupSunLighting();
         
-        // Земля с текстурой травы
-        const groundMat = new THREE.MeshStandardMaterial({ map: this.grassTexture, roughness: 0.9 });
+        // Земля с текстурой травы grass-2
+        const groundMat = new THREE.MeshStandardMaterial({ map: this.textures.grass, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.5;
@@ -699,8 +612,8 @@ export class World {
         this.scene.add(ground);
         this.objects.push(ground);
         
-        // Песок с текстурой
-        const sandMat = new THREE.MeshStandardMaterial({ map: this.sandTexture, roughness: 0.8 });
+        // Песок с текстурой sand-1
+        const sandMat = new THREE.MeshStandardMaterial({ map: this.textures.sand, roughness: 0.8 });
         const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
         sandRing.rotation.x = -Math.PI / 2;
         sandRing.position.y = -0.45;
