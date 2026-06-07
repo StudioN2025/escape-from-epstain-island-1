@@ -17,11 +17,10 @@ export class Monster {
         
         const group = new THREE.Group();
         
-        // Основное тело - СВЕТЛО-КРАСНЫЙ
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0xff6666,      // Светло-красный
-            emissive: 0x442222,   // Свечение красным
+            color: 0xff6666,
+            emissive: 0x442222,
             emissiveIntensity: 0.5,
             roughness: 0.2,
             metalness: 0.1
@@ -31,7 +30,6 @@ export class Monster {
         body.receiveShadow = true;
         group.add(body);
         
-        // Глаза - ЯРКО-КРАСНЫЕ СВЕТЯЩИЕСЯ
         const eyeMat = new THREE.MeshStandardMaterial({ 
             color: 0xff3333, 
             emissive: 0xff2222,
@@ -44,7 +42,6 @@ export class Monster {
         group.add(leftEye);
         group.add(rightEye);
         
-        // Зрачки - черные
         const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
         const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
         const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
@@ -53,7 +50,6 @@ export class Monster {
         group.add(leftPupil);
         group.add(rightPupil);
         
-        // Блик в глазах
         const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const leftHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
         const rightHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
@@ -62,14 +58,12 @@ export class Monster {
         group.add(leftHighlight);
         group.add(rightHighlight);
         
-        // Рот
         const mouthMat = new THREE.MeshStandardMaterial({ color: 0x883333 });
         const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 16, 32), mouthMat);
         mouth.rotation.x = 0.2;
         mouth.position.set(0, 0.05, 0.9);
         group.add(mouth);
         
-        // Зубы - белые
         const toothMat = new THREE.MeshStandardMaterial({ color: 0xffffee });
         const teethPositions = [[-0.12, 0.0, 1.05], [0, 0.0, 1.07], [0.12, 0.0, 1.05]];
         teethPositions.forEach(pos => {
@@ -78,7 +72,6 @@ export class Monster {
             group.add(tooth);
         });
         
-        // Рога - золотистые
         const hornMat = new THREE.MeshStandardMaterial({ color: 0xddaa77 });
         const leftHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
         const rightHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
@@ -87,7 +80,6 @@ export class Monster {
         group.add(leftHorn);
         group.add(rightHorn);
         
-        // Ноги
         const legMat = new THREE.MeshStandardMaterial({ color: 0xcc5555 });
         const legPositions = [[-0.45, -0.75, 0.55], [0.45, -0.75, 0.55], [-0.45, -0.75, -0.35], [0.45, -0.75, -0.35]];
         legPositions.forEach(pos => {
@@ -97,7 +89,6 @@ export class Monster {
             group.add(leg);
         });
         
-        // Когти
         const clawMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
         const clawPositions = [[-0.5, -0.45, 0.9], [0.5, -0.45, 0.9], [-0.5, -0.45, -0.65], [0.5, -0.45, -0.65]];
         clawPositions.forEach(pos => {
@@ -106,7 +97,6 @@ export class Monster {
             group.add(claw);
         });
         
-        // Шипы на спине
         const spikeMat = new THREE.MeshStandardMaterial({ color: 0xdd6666 });
         const spikePositions = [[0, 0.25, -0.85], [0.3, 0.15, -0.9], [-0.3, 0.15, -0.9], [0.15, -0.05, -0.95], [-0.15, -0.05, -0.95]];
         spikePositions.forEach(pos => {
@@ -115,7 +105,6 @@ export class Monster {
             group.add(spike);
         });
         
-        // Собственный свет монстра
         const monsterLight = new THREE.PointLight(0xff6633, 0.8, 15);
         monsterLight.position.set(0, 0.5, 0);
         group.add(monsterLight);
@@ -126,7 +115,6 @@ export class Monster {
         
         console.log('✅ Монстр создан на позиции:', this.mesh.position);
         
-        // Отладочный куб
         const debugBox = new THREE.Mesh(
             new THREE.BoxGeometry(1.3, 1.3, 1.3),
             new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true, transparent: true, opacity: 0.3 })
@@ -134,7 +122,6 @@ export class Monster {
         debugBox.position.set(0, 0, 0);
         this.mesh.add(debugBox);
         
-        // Анимация пульсации света
         const animateLights = () => {
             requestAnimationFrame(animateLights);
             if (this.mesh && this.mesh.parent) {
@@ -155,7 +142,6 @@ export class Monster {
         this.mesh.receiveShadow = true;
         this.useFBX = true;
         
-        // Добавляем свет к FBX модели
         const fbxLight = new THREE.PointLight(0xff6633, 0.8, 15);
         fbxLight.position.set(0, 0.5, 0);
         this.mesh.add(fbxLight);
@@ -169,27 +155,47 @@ export class Monster {
         this.position.set(35, 0, 30);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
-            console.log('👾 Монстр активирован на позиции:', this.position);
+            console.log('👾 Монстр АКТИВИРОВАН на позиции:', this.position);
+            console.log('👾 Монстр начинает охоту за игроком!');
         }
     }
     
     update(playerPos, deltaTime) {
-        if (!this.active) return false;
+        if (!this.active) {
+            return false;
+        }
         
         const direction = new THREE.Vector3().subVectors(playerPos, this.position);
         const distance = direction.length();
         
-        if (distance < 1.2) {
-            console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
-            return true;
+        // Отладочный вывод каждые 60 кадров
+        if (Math.random() < 0.02) {
+            console.log(`📏 Расстояние до монстра: ${distance.toFixed(2)}м | Позиция монстра: (${this.position.x.toFixed(1)}, ${this.position.z.toFixed(1)}) | Позиция игрока: (${playerPos.x.toFixed(1)}, ${playerPos.z.toFixed(1)})`);
         }
         
-        if (distance < 40) {
+        // ПРОВЕРКА СТОЛКНОВЕНИЯ - увеличен радиус захвата
+        if (distance < 1.5) {
+            console.log('💀💀💀 МОНСТР СХВАТИЛ ИГРОКА! 💀💀💀');
+            console.log(`💀 Расстояние: ${distance.toFixed(2)}м`);
+            return true; // Игрок пойман
+        }
+        
+        // Преследование
+        if (distance < 50) {
             direction.normalize();
-            const currentSpeed = this.speed + Math.max(0, (20 - distance) / 25);
+            // Скорость увеличивается при приближении
+            let currentSpeed = this.speed;
+            if (distance < 10) {
+                currentSpeed = this.speed * 1.8; // Ускорение когда близко
+                console.log(`🏃‍♂️ Монстр ускоряется! Скорость: ${currentSpeed.toFixed(1)}`);
+            } else if (distance < 20) {
+                currentSpeed = this.speed * 1.4;
+            }
+            
             const move = direction.multiplyScalar(currentSpeed * deltaTime);
             this.position.add(move);
             
+            // Границы острова
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
             this.position.y = 0;
@@ -199,6 +205,7 @@ export class Monster {
                 const angle = Math.atan2(direction.x, direction.z);
                 this.mesh.rotation.y = angle;
                 
+                // Анимация при движении
                 const time = Date.now() * 0.012;
                 const scale = 1 + Math.sin(time) * 0.05;
                 this.mesh.scale.set(scale, scale, scale);
