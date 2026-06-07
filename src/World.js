@@ -11,7 +11,8 @@ export class World {
         this.boundaryWalls = [];
         this.basementObjects = [];
         this.gltfLoader = new GLTFLoader();
-        this.treeModels = []; // Для хранения загруженных моделей деревьев
+        this.treeModel = null; // Храним загруженную модель для клонирования
+        this.treesLoaded = false;
     }
     
     async createBasement() {
@@ -132,7 +133,6 @@ export class World {
     }
     
     createInteractiveObjects(interactCallback) {
-        // Постамент для ключа
         const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
@@ -140,21 +140,17 @@ export class World {
         this.scene.add(pedestal);
         this.basementObjects.push(pedestal);
         
-        // Пытаемся загрузить GLB модель ключа
         const keyPath = 'assets/models/key.glb';
         
         this.gltfLoader.load(keyPath, (gltf) => {
             console.log('✅ GLB модель ключа успешно загружена!');
             const keyModel = gltf.scene;
             
-            // Автоматический расчет масштаба
             const box = new THREE.Box3().setFromObject(keyModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
             const desiredSize = 0.2;
             const scale = desiredSize / maxSize;
-            
-            console.log(`Оригинальный размер ключа: ${maxSize.toFixed(2)}м, масштаб: ${scale.toFixed(4)}`);
             
             keyModel.scale.setScalar(scale);
             keyModel.position.set(-3, 0.15, 4);
@@ -329,8 +325,8 @@ export class World {
             this.objects.push(hill);
         }
         
-        // Загружаем GLB деревья
-        this.loadTrees();
+        // Загружаем пальмы (асинхронно, не блокирует остальное)
+        this.loadTreesOptimized();
         
         const boatGroup = new THREE.Group();
         const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
@@ -430,78 +426,96 @@ export class World {
         this.scene.add(markerLight);
         this.objects.push(markerLight);
         
-        console.log('📍 Маркер спавна монстра добавлен на позицию (35, 0, 30)');
+        console.log('📍 Маркер спавна монстра добавлен');
     }
     
-    loadTrees() {
+    loadTreesOptimized() {
         const treePath = 'assets/models/date_palm.glb';
         
-        // Позиции для деревьев (50 деревьев на острове)
+        // Позиции для деревьев - уменьшим количество для производительности
         const treePositions = [];
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 30; i++) {  // 30 деревьев вместо 50
             const angle = Math.random() * Math.PI * 2;
-            const radius = 10 + Math.random() * 38;
+            const radius = 12 + Math.random() * 35;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             treePositions.push({ x, z, scale: 0.8 + Math.random() * 0.5 });
         }
         
         this.gltfLoader.load(treePath, (gltf) => {
-            console.log('✅ GLB модель пальмы успешно загружена!');
-            const originalTree = gltf.scene;
+            console.log('✅ GLB модель пальмы загружена, создаю деревья...');
+            this.treeModel = gltf.scene;
             
-            // Получаем размер оригинальной модели для масштабирования
-            const box = new THREE.Box3().setFromObject(originalTree);
+            // Получаем размер оригинальной модели
+            const box = new THREE.Box3().setFromObject(this.treeModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const baseScale = 2.5 / maxSize; // Желаемая высота ~2.5 метра
+            const baseScale = 2.5 / maxSize;
             
-            console.log(`Оригинальный размер пальмы: ${maxSize.toFixed(2)}м, базовый масштаб: ${baseScale.toFixed(4)}`);
+            console.log(`Масштаб пальмы: ${baseScale.toFixed(3)}`);
             
-            // Создаем деревья на всех позициях
-            treePositions.forEach(pos => {
-                const tree = originalTree.clone();
+            // Создаем деревья с задержкой между spawn, чтобы не тормозить
+            let created = 0;
+            const createNextTree = () => {
+                if (created >= treePositions.length) {
+                    console.log(`🌴 Создано ${created} пальм на острове`);
+                    return;
+                }
                 
-                // Масштабируем с небольшим разбросом
+                const pos = treePositions[created];
+                const tree = this.treeModel.clone();
+                
                 const finalScale = baseScale * pos.scale;
                 tree.scale.setScalar(finalScale);
-                
                 tree.position.set(pos.x, -0.5, pos.z);
                 tree.castShadow = true;
                 tree.receiveShadow = true;
                 
                 this.scene.add(tree);
                 this.objects.push(tree);
-            });
+                
+                created++;
+                
+                // Создаем следующее дерево в следующем кадре
+                setTimeout(createNextTree, 10);
+            };
             
-            console.log(`🌴 Создано ${treePositions.length} пальм на острове`);
+            createNextTree();
             
         }, (xhr) => {
             if (xhr.total) {
-                console.log(`Загрузка пальмы: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+                const percent = Math.floor(xhr.loaded / xhr.total * 100);
+                if (percent % 20 === 0) {
+                    console.log(`Загрузка пальмы: ${percent}%`);
+                }
             }
         }, (error) => {
             console.warn('⚠️ Не удалось загрузить GLB модель пальмы, создаю стандартные деревья');
-            console.log('💡 Поместите файл date_palm.glb в папку assets/models/');
             this.createDefaultTrees();
         });
     }
     
     createDefaultTrees() {
-        // Стандартные деревья если GLB не загрузился
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
         const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
         
         const treePositions = [];
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 60; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const radius = 8 + Math.random() * 38;
+            const radius = 10 + Math.random() * 38;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             treePositions.push([x, -0.5, z]);
         }
         
-        treePositions.forEach(pos => {
+        let created = 0;
+        const createNextTree = () => {
+            if (created >= treePositions.length) {
+                console.log(`🌲 Создано ${created} стандартных деревьев`);
+                return;
+            }
+            
+            const pos = treePositions[created];
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.3, 6), trunkMat);
             trunk.position.set(pos[0], pos[1] + 0.6, pos[2]);
             trunk.castShadow = true;
@@ -518,9 +532,12 @@ export class World {
             this.scene.add(foliage1);
             this.scene.add(foliage2);
             this.objects.push(trunk, foliage1, foliage2);
-        });
+            
+            created++;
+            setTimeout(createNextTree, 5);
+        };
         
-        console.log(`🌲 Создано ${treePositions.length} стандартных деревьев`);
+        createNextTree();
     }
     
     addCampfire() {
