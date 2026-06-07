@@ -43,32 +43,20 @@ export class World {
             boat: false
         };
         
-        // Загружаем все модели заранее при создании мира
         this.preloadAllModels();
     }
     
     preloadAllModels() {
         console.log('🔄 Начинаем предзагрузку всех моделей...');
-        
-        // Загружаем факел
         this.preloadModel('torch', 'assets/models/old_torch_with_wall_mounting.glb');
-        
-        // Загружаем ключ
         this.preloadModel('key', 'assets/models/key.glb');
-        
-        // Загружаем пальму
         this.preloadModel('palm', 'assets/models/date_palm.glb');
-        
-        // Загружаем костер
         this.preloadModel('campfire', 'assets/models/campfire.glb');
-        
-        // Загружаем лодку
         this.preloadModel('boat', 'assets/models/wooden_boat.glb');
     }
     
     preloadModel(name, path) {
         if (this.modelsLoading[name]) return;
-        
         this.modelsLoading[name] = true;
         
         this.gltfLoader.load(path, (gltf) => {
@@ -91,7 +79,6 @@ export class World {
     
     updatePlayerPosition(position) {
         this.playerPosition.copy(position);
-        
         const now = Date.now();
         if (now - this.lastUpdateTime > 100) {
             this.lastUpdateTime = now;
@@ -120,88 +107,123 @@ export class World {
     async createBasement() {
         this.clearBasement();
         
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8, side: THREE.DoubleSide });
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), floorMat);
+        // ПОЛ - сплошной без щелей
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.7, metalness: 0.1 });
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.5;
         floor.receiveShadow = true;
         this.scene.add(floor);
         this.basementObjects.push(floor);
         
-        const gridHelper = new THREE.GridHelper(20, 20, 0x886644, 0x664422);
-        gridHelper.position.y = -0.4;
-        this.scene.add(gridHelper);
-        this.basementObjects.push(gridHelper);
-        
+        // Стены - прилегают к полу без щелей
         const wallMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.6 });
-        const walls = [
-            { pos: [0, 1.5, -9.5], scale: [20, 3, 0.5] },
-            { pos: [0, 1.5, 9.5], scale: [20, 3, 0.5] },
-            { pos: [-9.5, 1.5, 0], scale: [0.5, 3, 20] },
-            { pos: [9.5, 1.5, 0], scale: [0.5, 3, 20] }
-        ];
         
-        walls.forEach(wall => {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(...wall.scale), wallMat);
-            mesh.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
-            mesh.receiveShadow = true;
-            this.scene.add(mesh);
-            this.basementObjects.push(mesh);
-        });
+        // Задняя стена (Z = -9)
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
+        backWall.position.set(0, 1.25, -9);
+        backWall.receiveShadow = true;
+        this.scene.add(backWall);
+        this.basementObjects.push(backWall);
         
-        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x2a2218, roughness: 0.9 });
-        const ceiling = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 20), ceilingMat);
+        // Передняя стена (Z = 9)
+        const frontWall = new THREE.Mesh(new THREE.BoxGeometry(18, 3.5, 0.3), wallMat);
+        frontWall.position.set(0, 1.25, 9);
+        frontWall.receiveShadow = true;
+        this.scene.add(frontWall);
+        this.basementObjects.push(frontWall);
+        
+        // Левая стена (X = -9)
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.5, 18), wallMat);
+        leftWall.position.set(-9, 1.25, 0);
+        leftWall.receiveShadow = true;
+        this.scene.add(leftWall);
+        this.basementObjects.push(leftWall);
+        
+        // Правая стена (X = 9)
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3.5, 18), wallMat);
+        rightWall.position.set(9, 1.25, 0);
+        rightWall.receiveShadow = true;
+        this.scene.add(rightWall);
+        this.basementObjects.push(rightWall);
+        
+        // Потолок
+        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 });
+        const ceiling = new THREE.Mesh(new THREE.BoxGeometry(18, 0.2, 18), ceilingMat);
         ceiling.position.set(0, 2.8, 0);
         this.scene.add(ceiling);
         this.basementObjects.push(ceiling);
         
+        // Деревянные балки на потолке
         const beamMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        for (let x = -7; x <= 7; x += 3.5) {
-            const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 18), beamMat);
-            beam.position.set(x, 2.7, 0);
+        for (let x = -6; x <= 6; x += 4) {
+            const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 17.5), beamMat);
+            beam.position.set(x, 2.75, 0);
             this.scene.add(beam);
             this.basementObjects.push(beam);
         }
         
+        // Колонны
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x6a5a4a });
-        for (let x = -6; x <= 6; x += 6) {
-            for (let z = -6; z <= 6; z += 6) {
-                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.5, 0.6), pillarMat);
-                pillar.position.set(x, 0, z);
-                pillar.castShadow = true;
-                this.scene.add(pillar);
-                this.basementObjects.push(pillar);
-            }
-        }
+        const pillarPositions = [
+            [-5, -0.2, -5], [5, -0.2, -5],
+            [-5, -0.2, 5], [5, -0.2, 5],
+            [-5, -0.2, 0], [5, -0.2, 0]
+        ];
+        pillarPositions.forEach(pos => {
+            const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.5, 0.6), pillarMat);
+            pillar.position.set(pos[0], pos[1] + 1, pos[2]);
+            pillar.castShadow = true;
+            this.scene.add(pillar);
+            this.basementObjects.push(pillar);
+        });
         
+        // Выходная дверь
         const doorMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
         this.exitDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), doorMat);
-        this.exitDoor.position.set(8, 0, -9.4);
+        this.exitDoor.position.set(8, 0.1, -8.9);
         this.exitDoor.castShadow = true;
         this.scene.add(this.exitDoor);
         this.basementObjects.push(this.exitDoor);
         
+        // Дверная коробка
         const frameMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
         const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
-        frameLeft.position.set(7.4, 1.1, -9.4);
+        frameLeft.position.set(7.35, 1.2, -8.9);
         const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.4, 0.3), frameMat);
-        frameRight.position.set(8.6, 1.1, -9.4);
-        const frameTop = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 0.3), frameMat);
-        frameTop.position.set(8, 2.3, -9.4);
+        frameRight.position.set(8.65, 1.2, -8.9);
+        const frameTop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 0.3), frameMat);
+        frameTop.position.set(8, 2.35, -8.9);
         this.scene.add(frameLeft);
         this.scene.add(frameRight);
         this.scene.add(frameTop);
         this.basementObjects.push(frameLeft, frameRight, frameTop);
         
+        // Бочки на полу (не в воздухе)
         this.addBarrels();
+        
+        // Факелы на стенах
         this.addTorchesFromCache();
+        
+        // Пьедестал для ключа на полу
+        const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
+        pedestal.position.set(-3, -0.3, 4);
+        pedestal.castShadow = true;
+        this.scene.add(pedestal);
+        this.basementObjects.push(pedestal);
     }
     
     addBarrels() {
         const barrelMat = new THREE.MeshStandardMaterial({ color: 0x7a5a3a });
-        const positions = [[-4, -0.5, 3], [3, -0.5, -3], [5, -0.5, 2], [-5, -0.5, -2], [0, -0.5, 5]];
+        // Бочки на полу - Y = -0.5 + высота/2 = -0.5 + 0.4 = -0.1
+        const positions = [
+            [-4, -0.1, 3], [4, -0.1, 3],
+            [-4, -0.1, -2], [4, -0.1, -2],
+            [0, -0.1, -4], [0, -0.1, 5]
+        ];
         positions.forEach(pos => {
-            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.8, 8), barrelMat);
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.55, 0.8, 8), barrelMat);
             barrel.position.set(pos[0], pos[1], pos[2]);
             barrel.castShadow = true;
             this.scene.add(barrel);
@@ -210,7 +232,11 @@ export class World {
     }
     
     addTorchesFromCache() {
-        const torchPositions = [[-7, 1, -6], [7, 1, -6], [-7, 1, 6], [7, 1, 6]];
+        // Факелы на стенах на высоте 1.5м
+        const torchPositions = [
+            [-8.7, 1.5, -6], [8.7, 1.5, -6],
+            [-8.7, 1.5, 6], [8.7, 1.5, 6]
+        ];
         
         const addTorch = (torchModel) => {
             torchPositions.forEach(pos => {
@@ -219,24 +245,29 @@ export class World {
                 const box = new THREE.Box3().setFromObject(torch);
                 const size = box.getSize(new THREE.Vector3());
                 const maxSize = Math.max(size.x, size.y, size.z);
-                const scale = 0.8 / maxSize;
+                const scale = 0.6 / maxSize;
                 
                 torch.scale.setScalar(scale);
                 torch.position.set(pos[0], pos[1], pos[2]);
                 torch.castShadow = true;
                 
+                // Поворот факела к стене
+                if (Math.abs(pos[0]) > 8) {
+                    torch.rotation.y = pos[0] > 0 ? -Math.PI / 2 : Math.PI / 2;
+                }
+                
                 this.scene.add(torch);
                 this.basementObjects.push(torch);
                 
-                const light = new THREE.PointLight(0xff6633, 0.6, 8);
-                light.position.set(pos[0], pos[1] + 0.3, pos[2]);
+                const light = new THREE.PointLight(0xff6633, 0.5, 7);
+                light.position.set(pos[0], pos[1] + 0.2, pos[2]);
                 this.scene.add(light);
                 this.basementObjects.push(light);
                 
                 const animateLight = () => {
                     requestAnimationFrame(animateLight);
                     if (light.parent) {
-                        light.intensity = 0.4 + Math.sin(Date.now() * 0.008) * 0.3;
+                        light.intensity = 0.4 + Math.sin(Date.now() * 0.008) * 0.2;
                     }
                 };
                 animateLight();
@@ -244,18 +275,17 @@ export class World {
         };
         
         if (this.modelsLoaded.torch && this.cachedModels.torch) {
-            addTorch(this.cachedModels.torch);
+            addTorch(this.cachedModels.torch.clone());
         } else {
             this.addTorchesStandard();
-            // Если модель еще загружается, ждем
             const checkInterval = setInterval(() => {
                 if (this.modelsLoaded.torch && this.cachedModels.torch) {
                     clearInterval(checkInterval);
-                    // Удаляем стандартные и добавляем GLB
+                    // Удаляем стандартные
                     this.basementObjects.forEach(obj => {
                         if (obj.isTorchStandard) this.scene.remove(obj);
                     });
-                    addTorch(this.cachedModels.torch);
+                    addTorch(this.cachedModels.torch.clone());
                 }
             }, 100);
         }
@@ -263,11 +293,13 @@ export class World {
     
     addTorchesStandard() {
         const torchMat = new THREE.MeshStandardMaterial({ color: 0xaa6633 });
-        const lightColor = 0xff6633;
+        const torchPositions = [
+            [-8.7, 1.5, -6], [8.7, 1.5, -6],
+            [-8.7, 1.5, 6], [8.7, 1.5, 6]
+        ];
         
-        const torchPositions = [[-7, 1, -6], [7, 1, -6], [-7, 1, 6], [7, 1, 6]];
         torchPositions.forEach(pos => {
-            const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.2, 6), torchMat);
+            const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.8, 6), torchMat);
             torch.position.set(pos[0], pos[1], pos[2]);
             torch.castShadow = true;
             torch.isTorchStandard = true;
@@ -275,41 +307,35 @@ export class World {
             this.basementObjects.push(torch);
             
             const flameMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
-            const flame = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 6), flameMat);
-            flame.position.set(pos[0], pos[1] + 0.7, pos[2]);
+            const flame = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.25, 6), flameMat);
+            flame.position.set(pos[0], pos[1] + 0.5, pos[2]);
             this.scene.add(flame);
             this.basementObjects.push(flame);
             
-            const light = new THREE.PointLight(lightColor, 0.5, 8);
-            light.position.set(pos[0], pos[1] + 0.5, pos[2]);
+            const light = new THREE.PointLight(0xff6633, 0.4, 6);
+            light.position.set(pos[0], pos[1] + 0.3, pos[2]);
             this.scene.add(light);
             this.basementObjects.push(light);
         });
     }
     
     createInteractiveObjects(interactCallback) {
-        const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
-        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
-        pedestal.position.set(-3, -0.3, 4);
-        pedestal.castShadow = true;
-        this.scene.add(pedestal);
-        this.basementObjects.push(pedestal);
-        
+        // Ключ на пьедестале
         const addKey = (keyModel) => {
             const box = new THREE.Box3().setFromObject(keyModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const desiredSize = 0.2;
+            const desiredSize = 0.25;
             const scale = desiredSize / maxSize;
             
             keyModel.scale.setScalar(scale);
-            keyModel.position.set(-3, 0.15, 4);
+            keyModel.position.set(-3, 0, 4);
             keyModel.castShadow = true;
             keyModel.receiveShadow = true;
             
             const newBox = new THREE.Box3().setFromObject(keyModel);
             const minY = newBox.min.y;
-            keyModel.position.y += -minY + 0.1;
+            keyModel.position.y += -minY + 0.15;
             
             keyModel.userData = {
                 onInteract: () => interactCallback('key')
@@ -326,13 +352,11 @@ export class World {
                     const time = Date.now() * 0.003;
                     keyModel.position.y = startY + Math.sin(time) * 0.08;
                     keyModel.rotation.y += 0.02;
-                    keyModel.rotation.x = Math.sin(time * 0.5) * 0.1;
-                    keyModel.rotation.z = Math.cos(time * 0.7) * 0.1;
                 }
             };
             animateKey();
             
-            const glowLight = new THREE.PointLight(0xffaa44, 0.5, 3);
+            const glowLight = new THREE.PointLight(0xffaa44, 0.4, 3);
             glowLight.position.set(-3, 0.3, 4);
             this.scene.add(glowLight);
             this.basementObjects.push(glowLight);
@@ -353,7 +377,6 @@ export class World {
             const checkInterval = setInterval(() => {
                 if (this.modelsLoaded.key && this.cachedModels.key) {
                     clearInterval(checkInterval);
-                    // Удаляем старый ключ и добавляем GLB
                     const oldKey = this.basementObjects.find(obj => obj.userData && obj.userData.isDefaultKey);
                     if (oldKey) this.scene.remove(oldKey);
                     addKey(this.cachedModels.key.clone());
@@ -385,7 +408,7 @@ export class World {
         keyGroup.add(tooth1);
         keyGroup.add(tooth2);
         
-        keyGroup.position.set(-3, 0, 4);
+        keyGroup.position.set(-3, 0.15, 4);
         keyGroup.castShadow = true;
         keyGroup.userData = { isDefaultKey: true, onInteract: () => interactCallback('key') };
         
@@ -393,18 +416,17 @@ export class World {
         this.basementObjects.push(keyGroup);
         this.interactiveObjects.push(keyGroup);
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.5, 3);
-        glowLight.position.set(-3, 0.2, 4);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.4, 3);
+        glowLight.position.set(-3, 0.35, 4);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
         
         const animateKey = () => {
             requestAnimationFrame(animateKey);
             if (keyGroup.parent) {
-                keyGroup.position.y = 0 + Math.sin(Date.now() * 0.003) * 0.1;
+                keyGroup.position.y = 0.15 + Math.sin(Date.now() * 0.003) * 0.05;
                 keyGroup.rotation.y += 0.02;
-                keyGroup.rotation.z = Math.sin(Date.now() * 0.002) * 0.1;
-                glowLight.intensity = 0.4 + Math.sin(Date.now() * 0.005) * 0.2;
+                glowLight.intensity = 0.3 + Math.sin(Date.now() * 0.005) * 0.2;
             }
         };
         animateKey();
@@ -420,7 +442,7 @@ export class World {
         };
         this.interactiveObjects.push(this.exitDoor);
         
-        const glowLight = new THREE.PointLight(0xffaa44, 0.8, 5);
+        const glowLight = new THREE.PointLight(0xffaa44, 0.6, 5);
         glowLight.position.copy(this.exitDoor.position);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
@@ -428,7 +450,7 @@ export class World {
         const animateGlow = () => {
             requestAnimationFrame(animateGlow);
             if (glowLight.parent) {
-                glowLight.intensity = 0.5 + Math.sin(Date.now() * 0.004) * 0.3;
+                glowLight.intensity = 0.4 + Math.sin(Date.now() * 0.004) * 0.3;
             }
         };
         animateGlow();
@@ -482,13 +504,8 @@ export class World {
             this.objects.push(hill);
         }
         
-        // Быстрое создание деревьев из кэша
         this.createTreesFromCache();
-        
-        // Быстрое создание костра
         this.addCampfireFromCache();
-        
-        // Быстрое создание лодки
         this.addBoatFromCache();
         
         const waterMat = new THREE.MeshStandardMaterial({ 
@@ -554,12 +571,8 @@ export class World {
     }
     
     setupSunLighting() {
-        if (this.sunLight) {
-            this.scene.remove(this.sunLight);
-        }
-        if (this.ambientLight) {
-            this.scene.remove(this.ambientLight);
-        }
+        if (this.sunLight) this.scene.remove(this.sunLight);
+        if (this.ambientLight) this.scene.remove(this.ambientLight);
         
         this.ambientLight = new THREE.AmbientLight(0x88aadd, 0.6);
         this.scene.add(this.ambientLight);
@@ -631,7 +644,6 @@ export class World {
             const checkInterval = setInterval(() => {
                 if (this.modelsLoaded.palm && this.cachedModels.palm) {
                     clearInterval(checkInterval);
-                    // Заменяем стандартные деревья на GLB
                     this.treeInstances.forEach(tree => {
                         if (tree.parent) this.scene.remove(tree);
                     });
