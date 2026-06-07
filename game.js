@@ -394,8 +394,8 @@ class Game {
         
         if (this.keys['KeyW']) move.add(forward);
         if (this.keys['KeyS']) move.sub(forward);
-        if (this.keys['KeyA']) move.sub(right);
-        if (this.keys['KeyD']) move.add(right);
+        if (this.keys['KeyD']) move.sub(right);
+        if (this.keys['KeyA']) move.add(right);
         
         if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
