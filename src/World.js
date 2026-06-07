@@ -620,8 +620,9 @@ export class World {
     createIsland() {
         this.clearBasement();
         
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
+        // НЕБО - приглушённое, глаза не выжигает
+        this.scene.background = new THREE.Color(0x6a8aad);
+        this.scene.fog = new THREE.FogExp2(0x6a8aad, 0.004);
         
         this.setupSunLighting();
         
@@ -721,51 +722,52 @@ export class World {
     }
     
     setupSunLighting() {
-    if (this.sunLight) this.scene.remove(this.sunLight);
-    if (this.ambientLight) this.scene.remove(this.ambientLight);
+        if (this.sunLight) this.scene.remove(this.sunLight);
+        if (this.ambientLight) this.scene.remove(this.ambientLight);
+        
+        // Ambient light - мягкий рассеянный свет
+        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.28);
+        this.scene.add(this.ambientLight);
+        
+        // Солнце - мягкое, не яркое
+        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.45);
+        this.sunLight.position.set(30, 30, 20);
+        this.sunLight.castShadow = true;
+        this.sunLight.receiveShadow = false;
+        this.sunLight.shadow.mapSize.width = 1024;
+        this.sunLight.shadow.mapSize.height = 1024;
+        this.sunLight.shadow.camera.near = 0.5;
+        this.sunLight.shadow.camera.far = 80;
+        this.sunLight.shadow.camera.left = -25;
+        this.sunLight.shadow.camera.right = 25;
+        this.sunLight.shadow.camera.top = 25;
+        this.sunLight.shadow.camera.bottom = -25;
+        this.scene.add(this.sunLight);
+        
+        // Холодный заполняющий свет
+        const skyLight = new THREE.PointLight(0x88aaff, 0.1);
+        skyLight.position.set(0, 15, 0);
+        this.scene.add(skyLight);
+        this.objects.push(skyLight);
+        
+        // Теплый свет снизу
+        const groundLight = new THREE.PointLight(0xccaa88, 0.08);
+        groundLight.position.set(0, -1, 0);
+        this.scene.add(groundLight);
+        this.objects.push(groundLight);
+        
+        // Контровой свет
+        const backLight = new THREE.DirectionalLight(0xffaa88, 0.1);
+        backLight.position.set(-15, 20, -20);
+        this.scene.add(backLight);
+        this.objects.push(backLight);
+        
+        console.log('☁️ Мягкое дневное освещение настроено');
+    }
     
-    // Ambient light - практически отсутствует
-    this.ambientLight = new THREE.AmbientLight(0x334455, 0.06);
-    this.scene.add(this.ambientLight);
-    
-    // Солнце - едва светит
-    this.sunLight = new THREE.DirectionalLight(0xaa8866, 0.15);
-    this.sunLight.position.set(30, 20, 20);
-    this.sunLight.castShadow = true;
-    this.sunLight.receiveShadow = false;
-    this.sunLight.shadow.mapSize.width = 1024;
-    this.sunLight.shadow.mapSize.height = 1024;
-    this.sunLight.shadow.camera.near = 0.5;
-    this.sunLight.shadow.camera.far = 80;
-    this.sunLight.shadow.camera.left = -25;
-    this.sunLight.shadow.camera.right = 25;
-    this.sunLight.shadow.camera.top = 25;
-    this.sunLight.shadow.camera.bottom = -25;
-    this.scene.add(this.sunLight);
-    
-    // Заполняющий свет - почти выключен
-    const skyLight = new THREE.PointLight(0x446688, 0.03);
-    skyLight.position.set(0, 15, 0);
-    this.scene.add(skyLight);
-    this.objects.push(skyLight);
-    
-    // Снизу ничего не светит
-    const groundLight = new THREE.PointLight(0x664422, 0.02);
-    groundLight.position.set(0, -1, 0);
-    this.scene.add(groundLight);
-    this.objects.push(groundLight);
-    
-    // Контровой свет
-    const backLight = new THREE.DirectionalLight(0x664433, 0.04);
-    backLight.position.set(-15, 20, -20);
-    this.scene.add(backLight);
-    this.objects.push(backLight);
-    
-    console.log('🌚 Экстремально тёмное освещение (почти полная темнота)');
-}
     createTreesFromCache() {
         const treePositions = [];
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 40; i++) {
             const angle = Math.random() * Math.PI * 2;
             const radius = 10 + Math.random() * 38;
             const x = Math.cos(angle) * radius;
