@@ -11,8 +11,42 @@ export class World {
         this.boundaryWalls = [];
         this.basementObjects = [];
         this.gltfLoader = new GLTFLoader();
-        this.treeModel = null; // Храним загруженную модель для клонирования
+        this.treeModel = null;
         this.treesLoaded = false;
+        this.treeInstances = [];
+        this.loadDistance = 40;
+        this.unloadDistance = 50;
+        this.playerPosition = new THREE.Vector3(0, 0, 0);
+        this.lastUpdateTime = 0;
+        this.sunLight = null;
+    }
+    
+    updatePlayerPosition(position) {
+        this.playerPosition.copy(position);
+        
+        const now = Date.now();
+        if (now - this.lastUpdateTime > 100) {
+            this.lastUpdateTime = now;
+            this.updateVisibility();
+        }
+    }
+    
+    updateVisibility() {
+        this.treeInstances.forEach(tree => {
+            const distance = this.playerPosition.distanceTo(tree.position);
+            if (distance < this.loadDistance) {
+                tree.visible = true;
+            } else if (distance > this.unloadDistance) {
+                tree.visible = false;
+            }
+        });
+        
+        this.objects.forEach(obj => {
+            if (obj.userData && obj.userData.isBoat) {
+                const distance = this.playerPosition.distanceTo(obj.position);
+                obj.visible = distance < this.loadDistance + 10;
+            }
+        });
     }
     
     async createBasement() {
@@ -92,7 +126,7 @@ export class World {
         this.basementObjects.push(frameLeft, frameRight, frameTop);
         
         this.addBarrels();
-        this.addTorches();
+        this.loadTorchesGLB();
     }
     
     addBarrels() {
@@ -107,7 +141,56 @@ export class World {
         });
     }
     
-    addTorches() {
+    loadTorchesGLB() {
+        const torchPath = 'assets/models/old_torch_with_wall_mounting.glb';
+        const torchPositions = [[-7, 1, -6], [7, 1, -6], [-7, 1, 6], [7, 1, 6]];
+        
+        this.gltfLoader.load(torchPath, (gltf) => {
+            console.log('✅ GLB модель факела загружена!');
+            
+            torchPositions.forEach(pos => {
+                const torch = gltf.scene.clone();
+                
+                // Автоматический расчет масштаба
+                const box = new THREE.Box3().setFromObject(torch);
+                const size = box.getSize(new THREE.Vector3());
+                const maxSize = Math.max(size.x, size.y, size.z);
+                const scale = 0.8 / maxSize;
+                
+                torch.scale.setScalar(scale);
+                torch.position.set(pos[0], pos[1], pos[2]);
+                torch.castShadow = true;
+                
+                this.scene.add(torch);
+                this.basementObjects.push(torch);
+                
+                // Добавляем свет
+                const light = new THREE.PointLight(0xff6633, 0.6, 8);
+                light.position.set(pos[0], pos[1] + 0.3, pos[2]);
+                this.scene.add(light);
+                this.basementObjects.push(light);
+                
+                // Анимация света
+                const animateLight = () => {
+                    requestAnimationFrame(animateLight);
+                    if (light.parent) {
+                        light.intensity = 0.4 + Math.sin(Date.now() * 0.008) * 0.3;
+                    }
+                };
+                animateLight();
+            });
+            
+        }, (xhr) => {
+            if (xhr.total) {
+                console.log(`Загрузка факела: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+            }
+        }, (error) => {
+            console.warn('⚠️ Не удалось загрузить GLB модель факела, создаю стандартные');
+            this.addTorchesStandard();
+        });
+    }
+    
+    addTorchesStandard() {
         const torchMat = new THREE.MeshStandardMaterial({ color: 0xaa6633 });
         const lightColor = 0xff6633;
         
@@ -143,7 +226,7 @@ export class World {
         const keyPath = 'assets/models/key.glb';
         
         this.gltfLoader.load(keyPath, (gltf) => {
-            console.log('✅ GLB модель ключа успешно загружена!');
+            console.log('✅ GLB модель ключа загружена!');
             const keyModel = gltf.scene;
             
             const box = new THREE.Box3().setFromObject(keyModel);
@@ -296,6 +379,9 @@ export class World {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
         
+        // Добавляем солнце
+        this.createSun();
+        
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -313,7 +399,7 @@ export class World {
         this.objects.push(sandRing);
         
         const hillMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2a });
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < 40; i++) {
             const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.4, 8), hillMat);
             const angle = Math.random() * Math.PI * 2;
             const radius = 10 + Math.random() * 35;
@@ -325,45 +411,9 @@ export class World {
             this.objects.push(hill);
         }
         
-        // Загружаем пальмы (асинхронно, не блокирует остальное)
-        this.loadTreesOptimized();
-        
-        const boatGroup = new THREE.Group();
-        const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
-        const boatBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 4), boatMat);
-        boatBody.castShadow = true;
-        boatGroup.add(boatBody);
-        
-        const boatFront = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1, 4), boatMat);
-        boatFront.rotation.x = Math.PI / 2;
-        boatFront.position.set(0, 0.2, 1.8);
-        boatFront.castShadow = true;
-        boatGroup.add(boatFront);
-        
-        const mastMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 2, 6), mastMat);
-        mast.position.set(0, 1.2, 0);
-        boatGroup.add(mast);
-        
-        const sailMat = new THREE.MeshStandardMaterial({ color: 0xeeddcc });
-        const sail = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), sailMat);
-        sail.position.set(0, 1.5, 0.1);
-        sail.castShadow = true;
-        boatGroup.add(sail);
-        
-        boatGroup.position.set(42, 0, 38);
-        boatGroup.castShadow = true;
-        this.scene.add(boatGroup);
-        this.objects.push(boatGroup);
-        
-        boatGroup.userData = {
-            onInteract: () => {
-                if (window.gameInstance && window.gameInstance.handleInteraction) {
-                    window.gameInstance.handleInteraction('boat');
-                }
-            }
-        };
-        this.interactiveObjects.push(boatGroup);
+        this.loadTreesWithVisibility();
+        this.loadCampfireGLB();
+        this.loadBoatGLB();
         
         const waterMat = new THREE.MeshStandardMaterial({ 
             color: 0x3366aa, 
@@ -407,10 +457,8 @@ export class World {
         this.boundaryWalls.push(westBoundary);
         this.objects.push(westBoundary);
         
-        this.addCampfire();
         this.addRocks();
         this.addFlowers();
-        this.addDock();
         
         const spawnMarker = new THREE.Mesh(
             new THREE.CylinderGeometry(1.2, 1.5, 0.2, 8),
@@ -426,121 +474,111 @@ export class World {
         this.scene.add(markerLight);
         this.objects.push(markerLight);
         
-        console.log('📍 Маркер спавна монстра добавлен');
+        console.log('📍 Остров создан');
     }
     
-    loadTreesOptimized() {
-        const treePath = 'assets/models/date_palm.glb';
+    createSun() {
+        // Создаем визуальное солнце
+        const sunGeometry = new THREE.SphereGeometry(2, 64, 64);
+        const sunMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffaa66,
+            emissive: 0xff4422,
+            emissiveIntensity: 1.2,
+            roughness: 0.1,
+            metalness: 0.9
+        });
+        const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+        sunMesh.position.set(50, 30, -30);
+        sunMesh.castShadow = false;
+        this.scene.add(sunMesh);
+        this.objects.push(sunMesh);
         
-        // Позиции для деревьев - уменьшим количество для производительности
-        const treePositions = [];
-        for (let i = 0; i < 30; i++) {  // 30 деревьев вместо 50
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 12 + Math.random() * 35;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            treePositions.push({ x, z, scale: 0.8 + Math.random() * 0.5 });
+        // Добавляем свечение вокруг солнца
+        const sunGlowGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+        const sunGlowMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff8844,
+            transparent: true,
+            opacity: 0.3
+        });
+        const sunGlow = new THREE.Mesh(sunGlowGeometry, sunGlowMaterial);
+        sunMesh.add(sunGlow);
+        
+        // Анимация солнца (медленное движение по небу)
+        const animateSun = () => {
+            requestAnimationFrame(animateSun);
+            const time = Date.now() * 0.0005;
+            // Небольшое движение
+            sunMesh.position.x = 50 + Math.sin(time) * 5;
+            sunMesh.position.z = -30 + Math.cos(time * 0.7) * 5;
+        };
+        animateSun();
+        
+        // Усиливаем направленный свет
+        if (this.sunLight) {
+            this.scene.remove(this.sunLight);
         }
         
-        this.gltfLoader.load(treePath, (gltf) => {
-            console.log('✅ GLB модель пальмы загружена, создаю деревья...');
-            this.treeModel = gltf.scene;
+        this.sunLight = new THREE.DirectionalLight(0xffdd99, 1.5);
+        this.sunLight.position.set(50, 30, -30);
+        this.sunLight.castShadow = true;
+        this.sunLight.shadow.mapSize.width = 2048;
+        this.sunLight.shadow.mapSize.height = 2048;
+        this.sunLight.shadow.camera.near = 0.5;
+        this.sunLight.shadow.camera.far = 100;
+        this.sunLight.shadow.camera.left = -30;
+        this.sunLight.shadow.camera.right = 30;
+        this.sunLight.shadow.camera.top = 30;
+        this.sunLight.shadow.camera.bottom = -30;
+        this.scene.add(this.sunLight);
+        
+        console.log('☀️ Солнце создано');
+    }
+    
+    loadCampfireGLB() {
+        const campfirePath = 'assets/models/campfire.glb';
+        
+        this.gltfLoader.load(campfirePath, (gltf) => {
+            console.log('✅ GLB модель костра загружена!');
+            const campfire = gltf.scene;
             
-            // Получаем размер оригинальной модели
-            const box = new THREE.Box3().setFromObject(this.treeModel);
+            const box = new THREE.Box3().setFromObject(campfire);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const baseScale = 2.5 / maxSize;
+            const scale = 0.8 / maxSize;
             
-            console.log(`Масштаб пальмы: ${baseScale.toFixed(3)}`);
+            campfire.scale.setScalar(scale);
+            campfire.position.set(0, -0.2, 0);
+            campfire.castShadow = true;
             
-            // Создаем деревья с задержкой между spawn, чтобы не тормозить
-            let created = 0;
-            const createNextTree = () => {
-                if (created >= treePositions.length) {
-                    console.log(`🌴 Создано ${created} пальм на острове`);
-                    return;
+            this.scene.add(campfire);
+            this.objects.push(campfire);
+            
+            // Добавляем свет от костра
+            const fireLight = new THREE.PointLight(0xff6600, 0.8, 15);
+            fireLight.position.set(0, 0.5, 0);
+            this.scene.add(fireLight);
+            this.objects.push(fireLight);
+            
+            // Анимация света
+            const animateFire = () => {
+                requestAnimationFrame(animateFire);
+                if (fireLight.parent) {
+                    fireLight.intensity = 0.6 + Math.sin(Date.now() * 0.01) * 0.4;
                 }
-                
-                const pos = treePositions[created];
-                const tree = this.treeModel.clone();
-                
-                const finalScale = baseScale * pos.scale;
-                tree.scale.setScalar(finalScale);
-                tree.position.set(pos.x, -0.5, pos.z);
-                tree.castShadow = true;
-                tree.receiveShadow = true;
-                
-                this.scene.add(tree);
-                this.objects.push(tree);
-                
-                created++;
-                
-                // Создаем следующее дерево в следующем кадре
-                setTimeout(createNextTree, 10);
             };
-            
-            createNextTree();
+            animateFire();
             
         }, (xhr) => {
             if (xhr.total) {
-                const percent = Math.floor(xhr.loaded / xhr.total * 100);
-                if (percent % 20 === 0) {
-                    console.log(`Загрузка пальмы: ${percent}%`);
-                }
+                console.log(`Загрузка костра: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
             }
         }, (error) => {
-            console.warn('⚠️ Не удалось загрузить GLB модель пальмы, создаю стандартные деревья');
-            this.createDefaultTrees();
+            console.warn('⚠️ Не удалось загрузить GLB модель костра, создаю стандартный');
+            this.addCampfireStandard();
         });
     }
     
-    createDefaultTrees() {
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
-        
-        const treePositions = [];
-        for (let i = 0; i < 60; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 10 + Math.random() * 38;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            treePositions.push([x, -0.5, z]);
-        }
-        
-        let created = 0;
-        const createNextTree = () => {
-            if (created >= treePositions.length) {
-                console.log(`🌲 Создано ${created} стандартных деревьев`);
-                return;
-            }
-            
-            const pos = treePositions[created];
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.3, 6), trunkMat);
-            trunk.position.set(pos[0], pos[1] + 0.6, pos[2]);
-            trunk.castShadow = true;
-            
-            const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 8), foliageMat);
-            foliage1.position.set(pos[0], pos[1] + 1.3, pos[2]);
-            foliage1.castShadow = true;
-            
-            const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.8, 8), foliageMat);
-            foliage2.position.set(pos[0], pos[1] + 2, pos[2]);
-            foliage2.castShadow = true;
-            
-            this.scene.add(trunk);
-            this.scene.add(foliage1);
-            this.scene.add(foliage2);
-            this.objects.push(trunk, foliage1, foliage2);
-            
-            created++;
-            setTimeout(createNextTree, 5);
-        };
-        
-        createNextTree();
-    }
-    
-    addCampfire() {
+    addCampfireStandard() {
         const logMat = new THREE.MeshStandardMaterial({ color: 0x8a5a3a });
         const fireMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0xff3300 });
         
@@ -588,9 +626,187 @@ export class World {
         animateFire();
     }
     
+    loadBoatGLB() {
+        const boatPath = 'assets/models/wooden_boat.glb';
+        
+        this.gltfLoader.load(boatPath, (gltf) => {
+            console.log('✅ GLB модель лодки загружена!');
+            const boat = gltf.scene;
+            
+            const box = new THREE.Box3().setFromObject(boat);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const scale = 1.2 / maxSize;
+            
+            boat.scale.setScalar(scale);
+            boat.position.set(42, -0.2, 38);
+            boat.castShadow = true;
+            boat.userData = { isBoat: true };
+            
+            boat.userData.onInteract = () => {
+                if (window.gameInstance && window.gameInstance.handleInteraction) {
+                    window.gameInstance.handleInteraction('boat');
+                }
+            };
+            
+            this.scene.add(boat);
+            this.objects.push(boat);
+            this.interactiveObjects.push(boat);
+            
+            // Добавляем свечение вокруг лодки
+            const boatGlow = new THREE.PointLight(0x44aaff, 0.5, 12);
+            boatGlow.position.set(42, 0.5, 38);
+            this.scene.add(boatGlow);
+            this.objects.push(boatGlow);
+            
+            console.log('🛶 Лодка готова к отплытию');
+            
+        }, (xhr) => {
+            if (xhr.total) {
+                console.log(`Загрузка лодки: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+            }
+        }, (error) => {
+            console.warn('⚠️ Не удалось загрузить GLB модель лодки, создаю стандартную');
+            this.addBoatStandard();
+        });
+    }
+    
+    addBoatStandard() {
+        const boatGroup = new THREE.Group();
+        const boatMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
+        const boatBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 4), boatMat);
+        boatBody.castShadow = true;
+        boatGroup.add(boatBody);
+        
+        const boatFront = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1, 4), boatMat);
+        boatFront.rotation.x = Math.PI / 2;
+        boatFront.position.set(0, 0.2, 1.8);
+        boatFront.castShadow = true;
+        boatGroup.add(boatFront);
+        
+        const mastMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 2, 6), mastMat);
+        mast.position.set(0, 1.2, 0);
+        boatGroup.add(mast);
+        
+        const sailMat = new THREE.MeshStandardMaterial({ color: 0xeeddcc });
+        const sail = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.5), sailMat);
+        sail.position.set(0, 1.5, 0.1);
+        sail.castShadow = true;
+        boatGroup.add(sail);
+        
+        boatGroup.position.set(42, 0, 38);
+        boatGroup.castShadow = true;
+        boatGroup.userData = { isBoat: true };
+        
+        boatGroup.userData.onInteract = () => {
+            if (window.gameInstance && window.gameInstance.handleInteraction) {
+                window.gameInstance.handleInteraction('boat');
+            }
+        };
+        
+        this.scene.add(boatGroup);
+        this.objects.push(boatGroup);
+        this.interactiveObjects.push(boatGroup);
+    }
+    
+    loadTreesWithVisibility() {
+        const treePath = 'assets/models/date_palm.glb';
+        
+        const treePositions = [];
+        for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 10 + Math.random() * 38;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            treePositions.push({ x, z, scale: 0.7 + Math.random() * 0.6 });
+        }
+        
+        this.gltfLoader.load(treePath, (gltf) => {
+            console.log('✅ GLB модель пальмы загружена!');
+            this.treeModel = gltf.scene;
+            
+            const box = new THREE.Box3().setFromObject(this.treeModel);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const baseScale = 2.5 / maxSize;
+            
+            treePositions.forEach((pos) => {
+                const tree = this.treeModel.clone();
+                
+                const finalScale = baseScale * pos.scale;
+                tree.scale.setScalar(finalScale);
+                tree.position.set(pos.x, -0.5, pos.z);
+                tree.castShadow = true;
+                tree.receiveShadow = true;
+                tree.visible = false;
+                
+                this.scene.add(tree);
+                this.objects.push(tree);
+                this.treeInstances.push(tree);
+            });
+            
+            console.log(`🌴 Создано ${treePositions.length} пальм (появляются при приближении)`);
+            this.updateVisibility();
+            
+        }, (xhr) => {
+            if (xhr.total) {
+                const percent = Math.floor(xhr.loaded / xhr.total * 100);
+                if (percent % 25 === 0) {
+                    console.log(`Загрузка пальмы: ${percent}%`);
+                }
+            }
+        }, (error) => {
+            console.warn('⚠️ Не удалось загрузить GLB модель пальмы');
+            this.createDefaultTreesOptimized();
+        });
+    }
+    
+    createDefaultTreesOptimized() {
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
+        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
+        
+        const treePositions = [];
+        for (let i = 0; i < 50; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 10 + Math.random() * 38;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            treePositions.push([x, -0.5, z]);
+        }
+        
+        treePositions.forEach((pos) => {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.3, 6), trunkMat);
+            trunk.position.set(pos[0], pos[1] + 0.6, pos[2]);
+            trunk.castShadow = true;
+            
+            const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 8), foliageMat);
+            foliage1.position.set(pos[0], pos[1] + 1.3, pos[2]);
+            foliage1.castShadow = true;
+            
+            const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.8, 8), foliageMat);
+            foliage2.position.set(pos[0], pos[1] + 2, pos[2]);
+            foliage2.castShadow = true;
+            
+            const treeGroup = new THREE.Group();
+            treeGroup.add(trunk);
+            treeGroup.add(foliage1);
+            treeGroup.add(foliage2);
+            treeGroup.position.set(pos[0], 0, pos[2]);
+            treeGroup.visible = false;
+            
+            this.scene.add(treeGroup);
+            this.objects.push(treeGroup);
+            this.treeInstances.push(treeGroup);
+        });
+        
+        console.log(`🌲 Создано ${treePositions.length} стандартных деревьев`);
+        this.updateVisibility();
+    }
+    
     addRocks() {
         const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a6a });
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 60; i++) {
             const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25), rockMat);
             const angle = Math.random() * Math.PI * 2;
             const radius = 12 + Math.random() * 42;
@@ -606,7 +822,7 @@ export class World {
     
     addFlowers() {
         const flowerColors = [0xffaa66, 0xff66aa, 0xaa66ff, 0xff6666];
-        for (let i = 0; i < 300; i++) {
+        for (let i = 0; i < 200; i++) {
             const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
             const flowerMat = new THREE.MeshStandardMaterial({ color: color });
             const flower = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.12, 6), flowerMat);
@@ -621,25 +837,6 @@ export class World {
         }
     }
     
-    addDock() {
-        const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4a });
-        const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 4), woodMat);
-        dock.position.set(40, -0.3, 36);
-        dock.castShadow = true;
-        this.scene.add(dock);
-        this.objects.push(dock);
-        
-        const postMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const postPositions = [[38.5, -0.2, 34.5], [41.5, -0.2, 34.5], [38.5, -0.2, 37.5], [41.5, -0.2, 37.5]];
-        postPositions.forEach(pos => {
-            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1, 6), postMat);
-            post.position.set(pos[0], pos[1], pos[2]);
-            post.castShadow = true;
-            this.scene.add(post);
-            this.objects.push(post);
-        });
-    }
-    
     clearScene() {
         this.objects.forEach(obj => {
             if (obj && obj.parent) {
@@ -650,5 +847,6 @@ export class World {
         this.interactiveObjects = [];
         this.boundaryWalls = [];
         this.waterPlane = null;
+        this.treeInstances = [];
     }
 }
