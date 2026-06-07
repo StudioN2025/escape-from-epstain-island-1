@@ -146,16 +146,28 @@ export class World {
             console.log('✅ GLB модель ключа успешно загружена!');
             const keyModel = gltf.scene;
             
-            // Настраиваем модель
-            keyModel.scale.setScalar(0.5);
-            keyModel.position.set(-3, 0, 4);
+            // АВТОМАТИЧЕСКИЙ РАСЧЕТ МАСШТАБА
+            const box = new THREE.Box3().setFromObject(keyModel);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const desiredSize = 0.2; // размер в метрах (как настоящий ключ)
+            const scale = desiredSize / maxSize;
+            
+            console.log(`Оригинальный размер модели: ${maxSize.toFixed(2)}м`);
+            console.log(`Применяю масштаб: ${scale.toFixed(4)}`);
+            
+            keyModel.scale.setScalar(scale);
+            keyModel.position.set(-3, 0.15, 4);
             keyModel.castShadow = true;
             keyModel.receiveShadow = true;
             
-            // Добавляем анимацию вращения
+            // Центрируем модель над постаментом
+            const newBox = new THREE.Box3().setFromObject(keyModel);
+            const minY = newBox.min.y;
+            keyModel.position.y += -minY + 0.1;
+            
             keyModel.userData = {
-                onInteract: () => interactCallback('key'),
-                originalPosition: new THREE.Vector3(-3, 0, 4)
+                onInteract: () => interactCallback('key')
             };
             
             this.scene.add(keyModel);
@@ -163,32 +175,37 @@ export class World {
             this.interactiveObjects.push(keyModel);
             
             // Анимация парения
+            const startY = keyModel.position.y;
             const animateKey = () => {
                 requestAnimationFrame(animateKey);
                 if (keyModel.parent) {
                     const time = Date.now() * 0.003;
-                    keyModel.position.y = 0 + Math.sin(time) * 0.15;
+                    keyModel.position.y = startY + Math.sin(time) * 0.08;
                     keyModel.rotation.y += 0.02;
+                    keyModel.rotation.x = Math.sin(time * 0.5) * 0.1;
+                    keyModel.rotation.z = Math.cos(time * 0.7) * 0.1;
                 }
             };
             animateKey();
             
-            // Добавляем световой эффект вокруг ключа
-            const glowLight = new THREE.PointLight(0xffaa44, 0.6, 4);
-            glowLight.position.set(-3, 0.2, 4);
+            // Световой эффект
+            const glowLight = new THREE.PointLight(0xffaa44, 0.5, 3);
+            glowLight.position.set(-3, 0.3, 4);
             this.scene.add(glowLight);
             this.basementObjects.push(glowLight);
             
             const animateLight = () => {
                 requestAnimationFrame(animateLight);
                 if (glowLight.parent) {
-                    glowLight.intensity = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
+                    glowLight.intensity = 0.3 + Math.sin(Date.now() * 0.005) * 0.2;
                 }
             };
             animateLight();
             
         }, (xhr) => {
-            console.log(`Загрузка ключа: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+            if (xhr.total) {
+                console.log(`Загрузка ключа: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+            }
         }, (error) => {
             console.warn('⚠️ Не удалось загрузить GLB модель ключа, создаю стандартную');
             console.log('💡 Поместите файл key.glb в папку assets/models/');
