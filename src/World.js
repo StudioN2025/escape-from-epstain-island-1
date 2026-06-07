@@ -721,49 +721,48 @@ export class World {
     }
     
     setupSunLighting() {
-        if (this.sunLight) this.scene.remove(this.sunLight);
-        if (this.ambientLight) this.scene.remove(this.ambientLight);
-        
-        // Ambient light - очень приглушенный
-        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.1);
-        this.scene.add(this.ambientLight);
-        
-        // Солнце - мягкое
-        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.25);
-        this.sunLight.position.set(30, 30, 20);
-        this.sunLight.castShadow = true;
-        this.sunLight.receiveShadow = false;
-        this.sunLight.shadow.mapSize.width = 1024;
-        this.sunLight.shadow.mapSize.height = 1024;
-        this.sunLight.shadow.camera.near = 0.5;
-        this.sunLight.shadow.camera.far = 80;
-        this.sunLight.shadow.camera.left = -25;
-        this.sunLight.shadow.camera.right = 25;
-        this.sunLight.shadow.camera.top = 25;
-        this.sunLight.shadow.camera.bottom = -25;
-        this.scene.add(this.sunLight);
-        
-        // Холодный заполняющий свет
-        const skyLight = new THREE.PointLight(0x88aaff, 0.05);
-        skyLight.position.set(0, 15, 0);
-        this.scene.add(skyLight);
-        this.objects.push(skyLight);
-        
-        // Теплый свет снизу
-        const groundLight = new THREE.PointLight(0xccaa88, 0.04);
-        groundLight.position.set(0, -1, 0);
-        this.scene.add(groundLight);
-        this.objects.push(groundLight);
-        
-        // Контровой свет
-        const backLight = new THREE.DirectionalLight(0xffaa88, 0.6);
-        backLight.position.set(-15, 20, -20);
-        this.scene.add(backLight);
-        this.objects.push(backLight);
-        
-        console.log('🌙 Приглушенное освещение настроено');
-    }
+    if (this.sunLight) this.scene.remove(this.sunLight);
+    if (this.ambientLight) this.scene.remove(this.ambientLight);
     
+    // Ambient light - минимальный, едва видно
+    this.ambientLight = new THREE.AmbientLight(0x445566, 0.12);
+    this.scene.add(this.ambientLight);
+    
+    // Солнце - очень тусклое, как в пасмурный день
+    this.sunLight = new THREE.DirectionalLight(0xccaa88, 0.28);
+    this.sunLight.position.set(30, 25, 20);
+    this.sunLight.castShadow = true;
+    this.sunLight.receiveShadow = false;
+    this.sunLight.shadow.mapSize.width = 1024;
+    this.sunLight.shadow.mapSize.height = 1024;
+    this.sunLight.shadow.camera.near = 0.5;
+    this.sunLight.shadow.camera.far = 80;
+    this.sunLight.shadow.camera.left = -25;
+    this.sunLight.shadow.camera.right = 25;
+    this.sunLight.shadow.camera.top = 25;
+    this.sunLight.shadow.camera.bottom = -25;
+    this.scene.add(this.sunLight);
+    
+    // Холодный заполняющий свет - едва заметный
+    const skyLight = new THREE.PointLight(0x6688aa, 0.06);
+    skyLight.position.set(0, 15, 0);
+    this.scene.add(skyLight);
+    this.objects.push(skyLight);
+    
+    // Теплый свет снизу - минимальный
+    const groundLight = new THREE.PointLight(0x886644, 0.04);
+    groundLight.position.set(0, -1, 0);
+    this.scene.add(groundLight);
+    this.objects.push(groundLight);
+    
+    // Контровой свет сзади - почти отсутствует
+    const backLight = new THREE.DirectionalLight(0x886655, 0.06);
+    backLight.position.set(-15, 20, -20);
+    this.scene.add(backLight);
+    this.objects.push(backLight);
+    
+    console.log('🌑 Тёмное освещение настроено (хоррор-режим)');
+}
     createTreesFromCache() {
         const treePositions = [];
         for (let i = 0; i < 60; i++) {
