@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class World {
     constructor(scene) {
@@ -9,6 +10,7 @@ export class World {
         this.waterPlane = null;
         this.boundaryWalls = [];
         this.basementObjects = [];
+        this.gltfLoader = new GLTFLoader();
     }
     
     async createBasement() {
@@ -129,6 +131,7 @@ export class World {
     }
     
     createInteractiveObjects(interactCallback) {
+        // Постамент для ключа
         const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.4 });
         const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.4, 8), pedestalMat);
         pedestal.position.set(-3, -0.3, 4);
@@ -136,6 +139,65 @@ export class World {
         this.scene.add(pedestal);
         this.basementObjects.push(pedestal);
         
+        // Пытаемся загрузить GLB модель ключа
+        const keyPath = 'assets/models/key.glb';
+        
+        this.gltfLoader.load(keyPath, (gltf) => {
+            console.log('✅ GLB модель ключа успешно загружена!');
+            const keyModel = gltf.scene;
+            
+            // Настраиваем модель
+            keyModel.scale.setScalar(0.5);
+            keyModel.position.set(-3, 0, 4);
+            keyModel.castShadow = true;
+            keyModel.receiveShadow = true;
+            
+            // Добавляем анимацию вращения
+            keyModel.userData = {
+                onInteract: () => interactCallback('key'),
+                originalPosition: new THREE.Vector3(-3, 0, 4)
+            };
+            
+            this.scene.add(keyModel);
+            this.basementObjects.push(keyModel);
+            this.interactiveObjects.push(keyModel);
+            
+            // Анимация парения
+            const animateKey = () => {
+                requestAnimationFrame(animateKey);
+                if (keyModel.parent) {
+                    const time = Date.now() * 0.003;
+                    keyModel.position.y = 0 + Math.sin(time) * 0.15;
+                    keyModel.rotation.y += 0.02;
+                }
+            };
+            animateKey();
+            
+            // Добавляем световой эффект вокруг ключа
+            const glowLight = new THREE.PointLight(0xffaa44, 0.6, 4);
+            glowLight.position.set(-3, 0.2, 4);
+            this.scene.add(glowLight);
+            this.basementObjects.push(glowLight);
+            
+            const animateLight = () => {
+                requestAnimationFrame(animateLight);
+                if (glowLight.parent) {
+                    glowLight.intensity = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
+                }
+            };
+            animateLight();
+            
+        }, (xhr) => {
+            console.log(`Загрузка ключа: ${Math.floor(xhr.loaded / xhr.total * 100)}%`);
+        }, (error) => {
+            console.warn('⚠️ Не удалось загрузить GLB модель ключа, создаю стандартную');
+            console.log('💡 Поместите файл key.glb в папку assets/models/');
+            this.createDefaultKey(interactCallback);
+        });
+    }
+    
+    createDefaultKey(interactCallback) {
+        // Стандартный ключ если GLB не загрузился
         const keyGroup = new THREE.Group();
         
         const ringGeo = new THREE.TorusGeometry(0.18, 0.05, 16, 32);
