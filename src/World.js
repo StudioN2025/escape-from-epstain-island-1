@@ -36,7 +36,8 @@ export class World {
             campfire: null,
             boat: null,
             barrel: null,
-            door: null
+            door: null,
+            canister: null
         };
         this.modelsLoading = {
             torch: false,
@@ -45,7 +46,8 @@ export class World {
             campfire: false,
             boat: false,
             barrel: false,
-            door: false
+            door: false,
+            canister: false
         };
         this.modelsLoaded = {
             torch: false,
@@ -54,7 +56,8 @@ export class World {
             campfire: false,
             boat: false,
             barrel: false,
-            door: false
+            door: false,
+            canister: false
         };
         
         this.preloadAllModels();
@@ -101,6 +104,7 @@ export class World {
         this.preloadModel('boat', 'assets/models/wooden_boat.glb');
         this.preloadModel('barrel', 'assets/models/old_barrel_free_download.glb');
         this.preloadModel('door', 'assets/models/medieval_door.glb');
+        this.preloadModel('canister', 'assets/models/canister.glb');
     }
     
     preloadModel(name, path) {
@@ -761,7 +765,7 @@ export class World {
             const box = new THREE.Box3().setFromObject(treeModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const baseScale = 3.2 / maxSize; // Увеличено с 2.5 до 3.2 (пальмы больше)
+            const baseScale = 3.2 / maxSize;
             
             treePositions.forEach((pos) => {
                 const tree = treeModel.clone();
@@ -1053,6 +1057,66 @@ export class World {
             flower.castShadow = this.settings.shadows;
             this.scene.add(flower);
             this.objects.push(flower);
+        }
+    }
+    
+    // НОВЫЙ МЕТОД ДЛЯ СПАВНА КАНИСТРЫ
+    spawnCanister(callback) {
+        const spawn = (model) => {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const scale = 0.6 / maxSize;
+            model.scale.setScalar(scale);
+            
+            // Случайная позиция на острове (не слишком близко к лодке)
+            let x, z;
+            do {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 15 + Math.random() * 25;
+                x = Math.cos(angle) * radius;
+                z = Math.sin(angle) * radius;
+            } while (Math.hypot(x - 42, z - 38) < 8);
+            
+            model.position.set(x, -0.2, z);
+            model.castShadow = this.settings.shadows;
+            model.receiveShadow = this.settings.shadows;
+            model.userData = {
+                onInteract: () => callback()
+            };
+            this.scene.add(model);
+            this.objects.push(model);
+            this.interactiveObjects.push(model);
+            
+            // Анимация парения
+            const startY = model.position.y;
+            const animate = () => {
+                requestAnimationFrame(animate);
+                if (model.parent) {
+                    model.position.y = startY + Math.sin(Date.now() * 0.003) * 0.1;
+                    model.rotation.y += 0.01;
+                }
+            };
+            animate();
+            
+            // Световой эффект
+            const glow = new THREE.PointLight(0xffaa66, 0.4, 5);
+            glow.position.copy(model.position);
+            this.scene.add(glow);
+            this.objects.push(glow);
+            
+            console.log('⛽ Канистра с бензином появилась на острове');
+        };
+        
+        if (this.modelsLoaded.canister && this.cachedModels.canister) {
+            spawn(this.cachedModels.canister.clone());
+        } else {
+            // Фолбэк – простая коробка
+            const geometry = new THREE.BoxGeometry(0.4, 0.6, 0.3);
+            const material = new THREE.MeshStandardMaterial({ color: 0xcc8844, metalness: 0.6 });
+            const dummy = new THREE.Mesh(geometry, material);
+            dummy.castShadow = this.settings.shadows;
+            spawn(dummy);
         }
     }
     
