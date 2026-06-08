@@ -163,6 +163,7 @@
             font-size: 20px;
         }
 
+        /* Инвентарь 5 слотов */
         #inventory {
             position: absolute;
             bottom: 20px;
@@ -172,31 +173,34 @@
             padding: 10px;
             backdrop-filter: blur(5px);
             border: 1px solid #ffaa44;
+            display: none;
+            gap: 10px;
+            flex-direction: row;
         }
 
         .inventory-slot {
-            width: 60px;
-            height: 60px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 8px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid #ffaa44;
+            border-radius: 5px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
+            font-size: 24px;
             position: relative;
         }
 
-        .slot-icon {
-            font-size: 30px;
-            opacity: 0.5;
+        .inventory-slot span:first-child {
+            position: absolute;
+            bottom: 2px;
+            right: 5px;
+            font-size: 10px;
+            color: #aaa;
         }
 
         .slot-item {
-            font-size: 40px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            font-size: 28px;
         }
 
         #quest-log {
@@ -265,6 +269,26 @@
             border-right: 3px solid #ff5500;
         }
 
+        /* Индикатор стамины */
+        #stamina-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 200px;
+            height: 15px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ffaa44;
+        }
+
+        #stamina-value {
+            width: 100%;
+            height: 100%;
+            background: #44ff44;
+            transition: width 0.1s;
+        }
+
         /* Меню настроек */
         .settings-content {
             background: rgba(0,0,0,0.95);
@@ -293,22 +317,8 @@
             font-size: 14px;
         }
 
-        .setting-item input {
-            width: 50px;
-            padding: 5px;
-            background: #333;
-            border: 1px solid #ffaa44;
-            color: white;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        .setting-item select {
-            padding: 5px 10px;
-            background: #333;
-            border: 1px solid #ffaa44;
-            color: white;
-            border-radius: 5px;
+        .setting-item input[type="range"] {
+            width: 150px;
             cursor: pointer;
         }
 
@@ -450,6 +460,7 @@
             .menu-content { padding: 20px; min-width: 280px; }
             .menu-content h1 { font-size: 22px; }
             .settings-content { min-width: 280px; padding: 20px; }
+            #stamina-bar { width: 120px; }
         }
     </style>
 </head>
@@ -476,10 +487,7 @@
             </div>
         </div>
         <div id="inventory">
-            <div class="inventory-slot">
-                <div class="slot-icon">📦</div>
-                <div class="slot-item" id="inventory-item"></div>
-            </div>
+            <!-- 5 слотов будут созданы скриптом -->
         </div>
         <div id="quest-log">
             <h3>📜 ЗАДАНИЕ</h3>
@@ -491,6 +499,9 @@
         <div id="status">
             🚪 ДВЕРЬ: <span id="distance-indicator">---</span> м<br>
             👾 МОНСТР: <span id="monster-status">❌</span>
+        </div>
+        <div id="stamina-bar">
+            <div id="stamina-value"></div>
         </div>
     </div>
 
@@ -508,7 +519,7 @@
 
     <div id="settings-screen" class="hidden">
         <div class="settings-content">
-            <h2>⚙️ НАСТРОЙКИ ГРАФИКИ</h2>
+            <h2>⚙️ НАСТРОЙКИ</h2>
             <div class="setting-item">
                 <label>🎮 Тени</label>
                 <label class="toggle-switch">
@@ -517,27 +528,8 @@
                 </label>
             </div>
             <div class="setting-item">
-                <label>✨ Постобработка (свечение)</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="postprocessing-toggle" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-            <div class="setting-item">
-                <label>🌴 Качество пальм</label>
-                <select id="quality-select">
-                    <option value="high">Высокое (40 пальм)</option>
-                    <option value="medium">Среднее (25 пальм)</option>
-                    <option value="low">Низкое (15 пальм)</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label>👁️ Дистанция прорисовки</label>
-                <select id="distance-select">
-                    <option value="high">Дальняя (50м)</option>
-                    <option value="medium" selected>Средняя (40м)</option>
-                    <option value="low">Близкая (30м)</option>
-                </select>
+                <label>☀️ Яркость</label>
+                <input type="range" id="brightness-slider" min="0.2" max="1.0" step="0.01" value="0.55">
             </div>
             <div class="settings-buttons">
                 <button id="settings-save">Сохранить</button>
