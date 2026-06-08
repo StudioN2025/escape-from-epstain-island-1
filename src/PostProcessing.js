@@ -4,26 +4,19 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 export class PostProcessing {
-    constructor(renderer, scene, camera) {
+    constructor(renderer, scene, camera, enabled = true) {
         this.renderer = renderer;
         this.scene = scene;
         this.camera = camera;
         this.composer = null;
         this.bloomPass = null;
-        this.enabled = this.checkPerformance(); // Автоматическое отключение на слабых ПК
+        this.enabled = enabled;
         
         if (this.enabled) {
             this.init();
         } else {
-            console.log('⚡ Постобработка отключена для производительности');
+            console.log('⚡ Постобработка отключена');
         }
-    }
-    
-    checkPerformance() {
-        // Простая проверка производительности
-        // На слабых ПК отключаем эффекты
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        return !isMobile;
     }
     
     init() {
@@ -34,14 +27,23 @@ export class PostProcessing {
         
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.25, // Уменьшено с 0.35
-            0.2,
-            0.1
+            0.35,
+            0.3,
+            0.15
         );
         this.bloomPass.renderToScreen = true;
         this.composer.addPass(this.bloomPass);
         
-        console.log('✨ Постобработка настроена (облегчённая)');
+        console.log('✨ Постобработка включена');
+    }
+    
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        if (!enabled) {
+            console.log('⚡ Постобработка выключена');
+        } else if (!this.composer) {
+            this.init();
+        }
     }
     
     setBloomStrength(strength) {
