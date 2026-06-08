@@ -4,11 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export class World {
     constructor(scene, settings) {
         this.scene = scene;
-        this.settings = settings || {
-            shadows: true,
-            postProcessing: true,
-            quality: 'high'
-        };
+        this.settings = settings || { shadows: true, brightness: 0.55 };
         this.interactiveObjects = [];
         this.objects = [];
         this.exitDoor = null;
@@ -729,10 +725,12 @@ export class World {
         if (this.sunLight) this.scene.remove(this.sunLight);
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         
-        this.ambientLight = new THREE.AmbientLight(0x88aacc, 0.28);
+        const brightness = this.settings.brightness !== undefined ? this.settings.brightness : 0.55;
+        
+        this.ambientLight = new THREE.AmbientLight(0x88aacc, brightness * 0.5);
         this.scene.add(this.ambientLight);
         
-        this.sunLight = new THREE.DirectionalLight(0xffdd99, 0.55);
+        this.sunLight = new THREE.DirectionalLight(0xffdd99, brightness);
         this.sunLight.position.set(30, 30, 20);
         this.sunLight.castShadow = this.settings.shadows;
         this.sunLight.receiveShadow = false;
@@ -746,7 +744,7 @@ export class World {
         this.sunLight.shadow.camera.bottom = -25;
         this.scene.add(this.sunLight);
         
-        console.log('☀️ Освещение настроено');
+        console.log('☀️ Освещение настроено, яркость:', brightness);
     }
     
     createTreesFromCache() {
@@ -763,7 +761,7 @@ export class World {
             const box = new THREE.Box3().setFromObject(treeModel);
             const size = box.getSize(new THREE.Vector3());
             const maxSize = Math.max(size.x, size.y, size.z);
-            const baseScale = 2.5 / maxSize;
+            const baseScale = 3.2 / maxSize; // Увеличено с 2.5 до 3.2 (пальмы больше)
             
             treePositions.forEach((pos) => {
                 const tree = treeModel.clone();
@@ -785,7 +783,7 @@ export class World {
                 this.treeInstances.push(tree);
             });
             
-            console.log(`🌴 Создано ${treePositions.length} пальм`);
+            console.log(`🌴 Создано ${treePositions.length} увеличенных пальм`);
             this.updateVisibility();
         };
         
@@ -820,16 +818,16 @@ export class World {
         }
         
         treePositions.forEach((pos) => {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.3, 6), trunkMat);
-            trunk.position.set(pos[0], pos[1] + 0.6, pos[2]);
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.9, 1.6, 6), trunkMat);
+            trunk.position.set(pos[0], pos[1] + 0.8, pos[2]);
             trunk.castShadow = this.settings.shadows;
             
-            const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1, 8), foliageMat);
-            foliage1.position.set(pos[0], pos[1] + 1.3, pos[2]);
+            const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 8), foliageMat);
+            foliage1.position.set(pos[0], pos[1] + 1.7, pos[2]);
             foliage1.castShadow = this.settings.shadows;
             
-            const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.8, 8), foliageMat);
-            foliage2.position.set(pos[0], pos[1] + 2, pos[2]);
+            const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.0, 8), foliageMat);
+            foliage2.position.set(pos[0], pos[1] + 2.5, pos[2]);
             foliage2.castShadow = this.settings.shadows;
             
             const treeGroup = new THREE.Group();
@@ -844,7 +842,7 @@ export class World {
             this.treeInstances.push(treeGroup);
         });
         
-        console.log(`🌲 Создано ${treePositions.length} стандартных деревьев`);
+        console.log(`🌲 Создано ${treePositions.length} увеличенных стандартных деревьев`);
         this.updateVisibility();
     }
     
