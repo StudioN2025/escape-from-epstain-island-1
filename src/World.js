@@ -21,6 +21,9 @@ export class World {
         this.sunLight = null;
         this.ambientLight = null;
         
+        // Массив для коллизий в подвале
+        this.collidables = [];
+        
         this.textures = {
             stuccoWall: null,
             stuccoCeiling: null,
@@ -62,6 +65,45 @@ export class World {
         
         this.preloadAllModels();
         this.loadTextures();
+    }
+    
+    // Метод для проверки коллизий в подвале
+    resolveCollision(position) {
+        let newPos = position.clone();
+        for (let obstacle of this.collidables) {
+            // Для колонн (box)
+            if (obstacle.type === 'box') {
+                const halfSize = obstacle.halfSize;
+                const min = new THREE.Vector3(obstacle.x - halfSize.x, obstacle.y - halfSize.y, obstacle.z - halfSize.z);
+                const max = new THREE.Vector3(obstacle.x + halfSize.x, obstacle.y + halfSize.y, obstacle.z + halfSize.z);
+                if (newPos.x > min.x && newPos.x < max.x &&
+                    newPos.z > min.z && newPos.z < max.z) {
+                    // Отталкиваем по ближайшей оси
+                    const dxL = newPos.x - min.x;
+                    const dxR = max.x - newPos.x;
+                    const dzL = newPos.z - min.z;
+                    const dzR = max.z - newPos.z;
+                    const minDist = Math.min(dxL, dxR, dzL, dzR);
+                    if (minDist === dxL) newPos.x = min.x - 0.01;
+                    else if (minDist === dxR) newPos.x = max.x + 0.01;
+                    else if (minDist === dzL) newPos.z = min.z - 0.01;
+                    else if (minDist === dzR) newPos.z = max.z + 0.01;
+                }
+            }
+            // Для бочек (cylinder)
+            else if (obstacle.type === 'cylinder') {
+                const dx = newPos.x - obstacle.x;
+                const dz = newPos.z - obstacle.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                const radius = obstacle.radius;
+                if (dist < radius) {
+                    const angle = Math.atan2(dz, dx);
+                    newPos.x = obstacle.x + Math.cos(angle) * radius;
+                    newPos.z = obstacle.z + Math.sin(angle) * radius;
+                }
+            }
+        }
+        return newPos;
     }
     
     loadTextures() {
@@ -158,6 +200,7 @@ export class World {
     
     async createBasement() {
         this.clearBasement();
+        this.collidables = [];
         
         const floorMat = new THREE.MeshStandardMaterial({ map: this.textures.laminate, roughness: 0.6, metalness: 0.05 });
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMat);
@@ -220,6 +263,14 @@ export class World {
             pillar.castShadow = this.settings.shadows;
             this.scene.add(pillar);
             this.basementObjects.push(pillar);
+            // Добавляем коллизию для колонны
+            this.collidables.push({
+                type: 'box',
+                x: pos[0],
+                y: pos[1] + 1,
+                z: pos[2],
+                halfSize: new THREE.Vector3(0.3, 1.25, 0.3)
+            });
         });
         
         this.addDoorFromCache();
@@ -332,8 +383,16 @@ export class World {
                 
                 this.scene.add(barrel);
                 this.basementObjects.push(barrel);
+                
+                // Коллизия для бочки (цилиндр)
+                this.collidables.push({
+                    type: 'cylinder',
+                    x: pos.x,
+                    z: pos.z,
+                    radius: 0.45
+                });
             });
-            console.log(`🛢️ Добавлено ${barrelPositions.length} GLB бочек`);
+            console.log(`🛢️ Добавлено ${barrelPositions.length} GLB бочек, добавлены коллизии`);
         };
         
         if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
@@ -367,6 +426,13 @@ export class World {
             barrel.isBarrelStandard = true;
             this.scene.add(barrel);
             this.basementObjects.push(barrel);
+            
+            this.collidables.push({
+                type: 'cylinder',
+                x: pos[0],
+                z: pos[2],
+                radius: 0.5
+            });
         });
     }
     
@@ -472,7 +538,8 @@ export class World {
             const scale = desiredSize / maxSize;
             
             keyModel.scale.setScalar(scale);
-            keyModel.position.set(-3, 0, 4);
+            // Ключ лежит на пьедестале без парения
+            keyModel.position.set(-3, 0.1, 4);
             keyModel.castShadow = this.settings.shadows;
             keyModel.receiveShadow = this.settings.shadows;
             keyModel.traverse((child) => {
@@ -482,41 +549,27 @@ export class World {
                 }
             });
             
+            // Выравнивание по низу модели
             const newBox = new THREE.Box3().setFromObject(keyModel);
             const minY = newBox.min.y;
-            keyModel.position.y += -minY + 0.15;
+            keyModel.position.y += -minY + 0.05;
             
             keyModel.userData = {
-                onInteract: () => interactCallback('key')
+                onInteract: () => {
+                    interactCallback('key');
+                    this.scene.remove(keyModel); // удаляем модель после подбора
+                }
             };
             
             this.scene.add(keyModel);
             this.basementObjects.push(keyModel);
             this.interactiveObjects.push(keyModel);
             
-            const startY = keyModel.position.y;
-            const animateKey = () => {
-                requestAnimationFrame(animateKey);
-                if (keyModel.parent) {
-                    const time = Date.now() * 0.003;
-                    keyModel.position.y = startY + Math.sin(time) * 0.08;
-                    keyModel.rotation.y += 0.02;
-                }
-            };
-            animateKey();
-            
+            // Световой эффект (без анимации подъёма)
             const glowLight = new THREE.PointLight(0xffaa44, 0.2, 3);
-            glowLight.position.set(-3, 0.3, 4);
+            glowLight.position.set(-3, 0.25, 4);
             this.scene.add(glowLight);
             this.basementObjects.push(glowLight);
-            
-            const animateLight = () => {
-                requestAnimationFrame(animateLight);
-                if (glowLight.parent) {
-                    glowLight.intensity = 0.12 + Math.sin(Date.now() * 0.005) * 0.08;
-                }
-            };
-            animateLight();
         };
         
         if (this.modelsLoaded.key && this.cachedModels.key) {
@@ -557,28 +610,24 @@ export class World {
         keyGroup.add(tooth1);
         keyGroup.add(tooth2);
         
-        keyGroup.position.set(-3, 0.15, 4);
+        keyGroup.position.set(-3, 0.1, 4);
         keyGroup.castShadow = this.settings.shadows;
-        keyGroup.userData = { isDefaultKey: true, onInteract: () => interactCallback('key') };
+        keyGroup.userData = {
+            isDefaultKey: true,
+            onInteract: () => {
+                interactCallback('key');
+                this.scene.remove(keyGroup);
+            }
+        };
         
         this.scene.add(keyGroup);
         this.basementObjects.push(keyGroup);
         this.interactiveObjects.push(keyGroup);
         
         const glowLight = new THREE.PointLight(0xffaa44, 0.2, 3);
-        glowLight.position.set(-3, 0.35, 4);
+        glowLight.position.set(-3, 0.25, 4);
         this.scene.add(glowLight);
         this.basementObjects.push(glowLight);
-        
-        const animateKey = () => {
-            requestAnimationFrame(animateKey);
-            if (keyGroup.parent) {
-                keyGroup.position.y = 0.15 + Math.sin(Date.now() * 0.003) * 0.05;
-                keyGroup.rotation.y += 0.02;
-                glowLight.intensity = 0.12 + Math.sin(Date.now() * 0.005) * 0.08;
-            }
-        };
-        animateKey();
     }
     
     showExitDoor() {
@@ -620,6 +669,7 @@ export class World {
         this.basementObjects = [];
         this.interactiveObjects = [];
         this.exitDoor = null;
+        this.collidables = [];
     }
     
     createIsland() {
@@ -1060,7 +1110,7 @@ export class World {
         }
     }
     
-    // НОВЫЙ МЕТОД ДЛЯ СПАВНА КАНИСТРЫ
+    // Канистра – лежит на земле, не летает, исчезает при подборе
     spawnCanister(callback) {
         const spawn = (model) => {
             const box = new THREE.Box3().setFromObject(model);
@@ -1082,24 +1132,17 @@ export class World {
             model.castShadow = this.settings.shadows;
             model.receiveShadow = this.settings.shadows;
             model.userData = {
-                onInteract: () => callback()
+                onInteract: () => {
+                    callback();
+                    this.scene.remove(model); // удаляем после подбора
+                    if (glow) this.scene.remove(glow);
+                }
             };
             this.scene.add(model);
             this.objects.push(model);
             this.interactiveObjects.push(model);
             
-            // Анимация парения
-            const startY = model.position.y;
-            const animate = () => {
-                requestAnimationFrame(animate);
-                if (model.parent) {
-                    model.position.y = startY + Math.sin(Date.now() * 0.003) * 0.1;
-                    model.rotation.y += 0.01;
-                }
-            };
-            animate();
-            
-            // Световой эффект
+            // Световой эффект (без анимации парения)
             const glow = new THREE.PointLight(0xffaa66, 0.4, 5);
             glow.position.copy(model.position);
             this.scene.add(glow);
