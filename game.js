@@ -37,6 +37,7 @@ class Game {
         this.stamina = 100;
         this.maxStamina = 100;
         this.inventoryOpen = false;
+        this.boatQuestStarted = false;  // флаг, что квест с бензином уже активирован
         
         // Настройки
         this.settings = {
@@ -56,7 +57,6 @@ class Game {
                 this.settings = { ...this.settings, ...parsed };
             } catch(e) {}
         }
-        
         setTimeout(() => {
             const shadowsToggle = document.getElementById('shadows-toggle');
             const brightnessSlider = document.getElementById('brightness-slider');
@@ -79,7 +79,6 @@ class Game {
         const loadingBar = document.getElementById('loading-bar');
         const loadingPercent = document.getElementById('loading-percent');
         const loadingStatus = document.getElementById('loading-status');
-        
         if (loadingBar) loadingBar.style.width = percent + '%';
         if (loadingPercent) loadingPercent.innerText = percent + '%';
         if (loadingStatus) loadingStatus.innerText = status;
@@ -88,45 +87,31 @@ class Game {
     async init() {
         this.updateLoadingProgress(5, 'Инициализация рендерера...');
         this.setupRenderer();
-        
         this.updateLoadingProgress(15, 'Создание мира...');
         this.setupWorld();
-        
         this.updateLoadingProgress(25, 'Настройка освещения...');
         this.setupLighting();
-        
         this.updateLoadingProgress(35, 'Загрузка игрока...');
         this.player = new Player(this.camera);
-        
         this.updateLoadingProgress(45, 'Загрузка монстра...');
         this.monster = new Monster(this.scene);
-        
         this.updateLoadingProgress(55, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
-        
         this.updateLoadingProgress(60, 'Загрузка интерфейса...');
         this.ui = new UIManager();
-        
         this.updateLoadingProgress(65, 'Загрузка сюжета...');
         this.story = new StoryManager(this.ui, this.inventory);
-        
         window.gameInstance = this;
-        
         this.updateLoadingProgress(70, 'Настройка управления...');
         this.setupEventListeners();
         this.setupSettingsUI();
-        
         this.updateLoadingProgress(75, 'Создание подвала...');
         await this.world.createBasement();
-        
         this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
-        
         this.updateLoadingProgress(90, 'Загрузка моделей монстра...');
         await this.loadMonsterFBX();
-        
         this.updateLoadingProgress(100, 'Готово!');
-        
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) {
@@ -137,7 +122,6 @@ class Game {
                 }, 500);
             }
         }, 500);
-        
         this.animate();
         this.story.startGame();
     }
@@ -147,13 +131,9 @@ class Game {
         const settingsScreen = document.getElementById('settings-screen');
         const settingsSave = document.getElementById('settings-save');
         const settingsCancel = document.getElementById('settings-cancel');
-        
         if (settingsBtn) {
-            settingsBtn.onclick = () => {
-                settingsScreen.classList.remove('hidden');
-            };
+            settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
         }
-        
         if (settingsSave) {
             settingsSave.onclick = () => {
                 this.settings.shadows = document.getElementById('shadows-toggle').checked;
@@ -164,7 +144,6 @@ class Game {
                 location.reload();
             };
         }
-        
         if (settingsCancel) {
             settingsCancel.onclick = () => {
                 settingsScreen.classList.add('hidden');
@@ -177,20 +156,15 @@ class Game {
     async loadMonsterFBX() {
         const loader = new FBXLoader();
         const fbxPath = 'assets/models/monster.fbx';
-        
         return new Promise((resolve) => {
             loader.load(fbxPath, (fbx) => {
-                console.log('✅ FBX модель монстра успешно загружена!');
-                if (this.monster.mesh) {
-                    this.scene.remove(this.monster.mesh);
-                }
+                console.log('✅ FBX модель монстра загружена');
+                if (this.monster.mesh) this.scene.remove(this.monster.mesh);
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
                 fbx.castShadow = this.settings.shadows;
-                fbx.receiveShadow = this.settings.shadows;
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
-                if (fbx.animations && fbx.animations.length > 0) {
-                    console.log(`🎬 Найдено ${fbx.animations.length} анимаций`);
+                if (fbx.animations.length) {
                     const action = this.fbxMixer.clipAction(fbx.animations[0]);
                     action.play();
                 }
@@ -204,10 +178,7 @@ class Game {
                     const percent = Math.floor((xhr.loaded / xhr.total) * 100);
                     this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
                 }
-            }, (error) => {
-                console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная');
-                resolve(false);
-            });
+            }, () => resolve(false));
         });
     }
     
@@ -221,7 +192,6 @@ class Game {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.shadowMap.enabled = this.settings.shadows;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
     }
     
@@ -230,20 +200,18 @@ class Game {
     }
     
     setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x332211);
-        this.scene.add(ambientLight);
-        const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
-        mainLight.position.set(10, 20, 5);
-        mainLight.castShadow = this.settings.shadows;
-        mainLight.shadow.mapSize.width = 1024;
-        mainLight.shadow.mapSize.height = 1024;
-        this.scene.add(mainLight);
-        const fillLight = new THREE.PointLight(0x6688aa, 0.3);
-        fillLight.position.set(0, 5, 0);
-        this.scene.add(fillLight);
-        const rimLight = new THREE.PointLight(0xffaa66, 0.2);
-        rimLight.position.set(-5, 3, -8);
-        this.scene.add(rimLight);
+        const ambient = new THREE.AmbientLight(0x332211);
+        this.scene.add(ambient);
+        const main = new THREE.DirectionalLight(0xffcc88, 0.8);
+        main.position.set(10, 20, 5);
+        main.castShadow = this.settings.shadows;
+        this.scene.add(main);
+        const fill = new THREE.PointLight(0x6688aa, 0.3);
+        fill.position.set(0, 5, 0);
+        this.scene.add(fill);
+        const rim = new THREE.PointLight(0xffaa66, 0.2);
+        rim.position.set(-5, 3, -8);
+        this.scene.add(rim);
         this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
         this.moonLight.position.set(-10, 15, -10);
         this.moonLight.castShadow = this.settings.shadows;
@@ -269,24 +237,14 @@ class Game {
             this.camera.rotation.y = this.yaw;
             this.camera.rotation.x = this.pitch;
         });
-        
-        // Исправленный захват указателя — без ошибок SecurityError
         this.renderer.domElement.addEventListener('click', () => {
-            if (this.gameActive && this.renderer.domElement && document.pointerLockElement !== this.renderer.domElement) {
-                try {
-                    this.renderer.domElement.requestPointerLock();
-                } catch (e) { console.log('Pointer lock error:', e); }
+            if (this.gameActive && document.pointerLockElement !== this.renderer.domElement) {
+                try { this.renderer.domElement.requestPointerLock(); } catch(e) {}
             }
         });
-        
         const lockChange = () => {
-            if (document.pointerLockElement === this.renderer.domElement) {
-                this.pointerLocked = true;
-                document.body.style.cursor = 'none';
-            } else {
-                this.pointerLocked = false;
-                document.body.style.cursor = 'auto';
-            }
+            this.pointerLocked = (document.pointerLockElement === this.renderer.domElement);
+            document.body.style.cursor = this.pointerLocked ? 'none' : 'auto';
         };
         document.addEventListener('pointerlockchange', lockChange);
         document.addEventListener('mozpointerlockchange', lockChange);
@@ -327,15 +285,34 @@ class Game {
             case 'key':
                 this.inventory.addItem('key', '🔑');
                 this.story.completeQuest('find_key');
-                this.ui.showMessage('🔑 Вы нашли ржавый ключ!', 3000);
+                this.ui.showMessage('🔑 Вы нашли ключ!', 3000);
                 this.world.showExitDoor();
                 break;
             case 'door':
                 if (this.inventory.hasItem('key')) this.transitionToIsland();
-                else this.ui.showMessage('🔒 Дверь заперта. Нужно найти ключ!', 2000);
+                else this.ui.showMessage('🔒 Дверь заперта. Нужен ключ!', 2000);
                 break;
             case 'boat':
-                if (this.gamePhase === 'island') this.winGame();
+                if (this.gamePhase === 'island') {
+                    if (!this.boatQuestStarted) {
+                        this.boatQuestStarted = true;
+                        this.ui.showMessage('⛽ Моторная лодка, но бензина нет. Найдите канистру с бензином на острове!', 5000);
+                        this.story.addQuest('find_fuel', '⛽ Найдите канистру с бензином');
+                        this.ui.updateQuest('⛽ Найдите канистру с бензином на острове');
+                        this.world.spawnCanister(() => this.handleInteraction('fuel'));
+                    } else if (this.inventory.hasFuel()) {
+                        this.winGame();
+                    } else {
+                        this.ui.showMessage('⛽ Нужно найти бензин! Канистра где-то на острове.', 3000);
+                    }
+                }
+                break;
+            case 'fuel':
+                this.inventory.addFuel();
+                this.ui.showMessage('⛽ Вы нашли канистру с бензином! Возвращайтесь к лодке.', 3000);
+                this.story.completeQuest('find_fuel');
+                this.story.addQuest('use_fuel', '🛶 Заправьте лодку и уплывите');
+                this.ui.updateQuest('🛶 Заправьте лодку бензином и уплывите');
                 break;
         }
     }
@@ -347,8 +324,8 @@ class Game {
             this.world.createIsland();
             this.monster.activate();
             this.story.completeQuest('escape_basement');
-            this.story.addQuest('find_boat', '🛶 Найдите лодку на острове и сбегите от монстра');
-            this.ui.updateQuest('🛶 Найдите лодку на острове и сбегите от монстра!');
+            this.story.addQuest('find_boat', '🛶 Найдите лодку на острове');
+            this.ui.updateQuest('🛶 Найдите лодку на острове');
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             setTimeout(() => {
@@ -373,15 +350,13 @@ class Game {
     
     updateMovement(deltaTime) {
         let speed = 3.8;
-        let isSprinting = false;
         if (this.keys['ShiftLeft'] && this.stamina > 0 && this.gameActive) {
             speed = 5.5;
-            isSprinting = true;
             this.stamina = Math.max(0, this.stamina - deltaTime * 25);
         } else if (!this.keys['ShiftLeft']) {
             this.stamina = Math.min(this.maxStamina, this.stamina + deltaTime * 15);
         }
-        const moveDistance = speed * deltaTime;
+        const moveDist = speed * deltaTime;
         const forward = new THREE.Vector3();
         const right = new THREE.Vector3();
         this.camera.getWorldDirection(forward);
@@ -393,8 +368,8 @@ class Game {
         if (this.keys['KeyS']) move.sub(forward);
         if (this.keys['KeyA']) move.add(right);
         if (this.keys['KeyD']) move.sub(right);
-        if (move.length() > 0) move.normalize();
-        move.multiplyScalar(moveDistance);
+        if (move.length()) move.normalize();
+        move.multiplyScalar(moveDist);
         this.player.position.add(move);
         const bounds = this.gamePhase === 'basement' ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 } : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
         this.player.updatePhysics(deltaTime, bounds);
@@ -420,7 +395,7 @@ class Game {
         if (this.gamePhase === 'basement' && this.world.exitDoor) {
             const d = this.player.position.distanceTo(this.world.exitDoor.position);
             const de = document.getElementById('distance-indicator');
-            if (de) { de.innerText = d.toFixed(1); de.style.color = d < 2 ? '#ffaa44' : '#ffffff'; }
+            if (de) { de.innerText = d.toFixed(1); de.style.color = d < 2 ? '#ffaa44' : '#fff'; }
         }
         const staminaDiv = document.getElementById('stamina-value');
         if (staminaDiv) staminaDiv.style.width = `${(this.stamina / this.maxStamina) * 100}%`;
@@ -449,6 +424,7 @@ class Game {
     startGame() {
         this.gameActive = true;
         this.gamePhase = 'basement';
+        this.boatQuestStarted = false;
         this.ui.hideMenu();
         document.getElementById('game-ui')?.classList.remove('hidden');
         this.player.position.set(0, 1.6, 0);
