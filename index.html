@@ -89,7 +89,7 @@
             color: #ffaa44;
         }
 
-        /* Остальные стили */
+        /* Игровой интерфейс */
         #game-ui {
             position: fixed;
             width: 100%;
@@ -265,6 +265,122 @@
             border-right: 3px solid #ff5500;
         }
 
+        /* Меню настроек */
+        .settings-content {
+            background: rgba(0,0,0,0.95);
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid #ffaa44;
+            min-width: 350px;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-content h2 {
+            color: #ffaa44;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            color: white;
+        }
+
+        .setting-item label {
+            font-size: 14px;
+        }
+
+        .setting-item input {
+            width: 50px;
+            padding: 5px;
+            background: #333;
+            border: 1px solid #ffaa44;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .setting-item select {
+            padding: 5px 10px;
+            background: #333;
+            border: 1px solid #ffaa44;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #ffaa44;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .settings-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .settings-buttons button {
+            background: #ffaa44;
+            color: #1a1a1a;
+            border: none;
+            padding: 8px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .settings-buttons button:hover {
+            transform: scale(1.05);
+            background: #ffcc66;
+        }
+
         .menu-content, .game-over-content, .win-content {
             background: rgba(0,0,0,0.95);
             padding: 40px;
@@ -306,7 +422,7 @@
             background: #ffcc66;
         }
 
-        #menu-overlay, #game-over, #win-screen {
+        #menu-overlay, #game-over, #win-screen, #settings-screen {
             position: fixed;
             top: 0;
             left: 0;
@@ -333,6 +449,7 @@
             #status { font-size: 11px; padding: 8px 12px; }
             .menu-content { padding: 20px; min-width: 280px; }
             .menu-content h1 { font-size: 22px; }
+            .settings-content { min-width: 280px; padding: 20px; }
         }
     </style>
 </head>
@@ -377,14 +494,55 @@
         </div>
     </div>
 
-    <div id="menu-overlay" class="hidden">
+    <div id="menu-overlay">
         <div class="menu-content">
             <h1>🏝️ ПОБЕГ С ОСТРОВА 🏝️</h1>
             <p>Вы проснулись в тёмном подвале заброшенного дома.<br>
             Что-то здесь не так... Вам нужно найти ключ и выбраться на поверхность.<br>
             Но остров скрывает ужасную тайну.</p>
             <button id="start-game">▶ НАЧАТЬ ИГРУ</button>
+            <button id="settings-btn">⚙️ НАСТРОЙКИ</button>
             <button id="restart-game">🔄 ПЕРЕЗАПУСТИТЬ</button>
+        </div>
+    </div>
+
+    <div id="settings-screen" class="hidden">
+        <div class="settings-content">
+            <h2>⚙️ НАСТРОЙКИ ГРАФИКИ</h2>
+            <div class="setting-item">
+                <label>🎮 Тени</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="shadows-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label>✨ Постобработка (свечение)</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="postprocessing-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="setting-item">
+                <label>🌴 Качество пальм</label>
+                <select id="quality-select">
+                    <option value="high">Высокое (40 пальм)</option>
+                    <option value="medium">Среднее (25 пальм)</option>
+                    <option value="low">Низкое (15 пальм)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>👁️ Дистанция прорисовки</label>
+                <select id="distance-select">
+                    <option value="high">Дальняя (50м)</option>
+                    <option value="medium" selected>Средняя (40м)</option>
+                    <option value="low">Близкая (30м)</option>
+                </select>
+            </div>
+            <div class="settings-buttons">
+                <button id="settings-save">Сохранить</button>
+                <button id="settings-cancel">Отмена</button>
+            </div>
         </div>
     </div>
 
