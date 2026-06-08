@@ -35,7 +35,44 @@ class Game {
         this.pointerLocked = false;
         this.loadingProgress = 0;
         
+        // Настройки по умолчанию
+        this.settings = {
+            shadows: true,
+            postProcessing: true,
+            quality: 'medium',
+            drawDistance: 'medium'
+        };
+        
+        this.loadSettings();
         this.init();
+    }
+    
+    loadSettings() {
+        const saved = localStorage.getItem('gameSettings');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                this.settings = { ...this.settings, ...parsed };
+            } catch(e) {}
+        }
+        
+        // Применяем кнопки в меню
+        setTimeout(() => {
+            const shadowsToggle = document.getElementById('shadows-toggle');
+            const ppToggle = document.getElementById('postprocessing-toggle');
+            const qualitySelect = document.getElementById('quality-select');
+            const distanceSelect = document.getElementById('distance-select');
+            
+            if (shadowsToggle) shadowsToggle.checked = this.settings.shadows;
+            if (ppToggle) ppToggle.checked = this.settings.postProcessing;
+            if (qualitySelect) qualitySelect.value = this.settings.quality;
+            if (distanceSelect) distanceSelect.value = this.settings.drawDistance;
+        }, 100);
+    }
+    
+    saveSettings() {
+        localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+        console.log('💾 Настройки сохранены');
     }
     
     updateLoadingProgress(percent, status) {
@@ -81,6 +118,7 @@ class Game {
         
         this.updateLoadingProgress(80, 'Настройка управления...');
         this.setupEventListeners();
+        this.setupSettingsUI();
         
         this.updateLoadingProgress(85, 'Создание подвала...');
         await this.world.createBasement();
@@ -108,8 +146,48 @@ class Game {
         this.story.startGame();
     }
     
+    setupSettingsUI() {
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsScreen = document.getElementById('settings-screen');
+        const settingsSave = document.getElementById('settings-save');
+        const settingsCancel = document.getElementById('settings-cancel');
+        
+        if (settingsBtn) {
+            settingsBtn.onclick = () => {
+                settingsScreen.classList.remove('hidden');
+            };
+        }
+        
+        if (settingsSave) {
+            settingsSave.onclick = () => {
+                // Сохраняем настройки
+                this.settings.shadows = document.getElementById('shadows-toggle').checked;
+                this.settings.postProcessing = document.getElementById('postprocessing-toggle').checked;
+                this.settings.quality = document.getElementById('quality-select').value;
+                this.settings.drawDistance = document.getElementById('distance-select').value;
+                
+                this.saveSettings();
+                settingsScreen.classList.add('hidden');
+                
+                // Показываем сообщение о необходимости перезапуска
+                alert('Настройки сохранены. Перезапустите игру для применения изменений.');
+            };
+        }
+        
+        if (settingsCancel) {
+            settingsCancel.onclick = () => {
+                settingsScreen.classList.add('hidden');
+                // Восстанавливаем значения из сохранённых
+                document.getElementById('shadows-toggle').checked = this.settings.shadows;
+                document.getElementById('postprocessing-toggle').checked = this.settings.postProcessing;
+                document.getElementById('quality-select').value = this.settings.quality;
+                document.getElementById('distance-select').value = this.settings.drawDistance;
+            };
+        }
+    }
+    
     setupPostProcessing() {
-        this.postProcessing = new PostProcessing(this.renderer, this.scene, this.camera);
+        this.postProcessing = new PostProcessing(this.renderer, this.scene, this.camera, this.settings.postProcessing);
         console.log('✨ Постобработка настроена');
     }
     
@@ -127,8 +205,8 @@ class Game {
                 
                 fbx.scale.setScalar(0.02);
                 fbx.position.copy(this.monster.position);
-                fbx.castShadow = true;
-                fbx.receiveShadow = true;
+                fbx.castShadow = this.settings.shadows;
+                fbx.receiveShadow = this.settings.shadows;
                 
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 
@@ -171,13 +249,13 @@ class Game {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.enabled = this.settings.shadows;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
     }
     
     setupWorld() {
-        this.world = new World(this.scene);
+        this.world = new World(this.scene, this.settings);
     }
     
     setupLighting() {
@@ -186,7 +264,7 @@ class Game {
         
         const mainLight = new THREE.DirectionalLight(0xffcc88, 0.8);
         mainLight.position.set(10, 20, 5);
-        mainLight.castShadow = true;
+        mainLight.castShadow = this.settings.shadows;
         mainLight.shadow.mapSize.width = 1024;
         mainLight.shadow.mapSize.height = 1024;
         mainLight.shadow.camera.near = 0.5;
@@ -207,7 +285,7 @@ class Game {
         
         this.moonLight = new THREE.DirectionalLight(0x6688cc, 0.4);
         this.moonLight.position.set(-10, 15, -10);
-        this.moonLight.castShadow = true;
+        this.moonLight.castShadow = this.settings.shadows;
         this.scene.add(this.moonLight);
     }
     
@@ -394,8 +472,8 @@ class Game {
         
         if (this.keys['KeyW']) move.add(forward);
         if (this.keys['KeyS']) move.sub(forward);
-        if (this.keys['KeyD']) move.sub(right);
         if (this.keys['KeyA']) move.add(right);
+        if (this.keys['KeyD']) move.sub(right);
         
         if (move.length() > 0) move.normalize();
         move.multiplyScalar(moveDistance);
@@ -473,7 +551,7 @@ class Game {
             this.updateMovement(deltaTime);
         }
         
-        if (this.postProcessing && this.postProcessing.composer) {
+        if (this.postProcessing && this.postProcessing.enabled) {
             this.postProcessing.render();
         } else if (this.renderer) {
             this.renderer.render(this.scene, this.camera);
