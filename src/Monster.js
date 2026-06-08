@@ -5,7 +5,7 @@ export class Monster {
         this.scene = scene;
         this.mesh = null;
         this.active = false;
-        this.speed = 3.2;
+        this.speed = 2.4; // уменьшено с 3.2
         this.position = new THREE.Vector3(35, 0, 30);
         this.useFBX = false;
         this.mixer = null;
@@ -121,15 +121,6 @@ export class Monster {
         );
         debugBox.position.set(0, 0, 0);
         this.mesh.add(debugBox);
-        
-        const animateLights = () => {
-            requestAnimationFrame(animateLights);
-            if (this.mesh && this.mesh.parent) {
-                const intensity = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
-                monsterLight.intensity = intensity;
-            }
-        };
-        animateLights();
     }
     
     replaceWithFBX(fbx) {
@@ -147,7 +138,7 @@ export class Monster {
         this.mesh.add(fbxLight);
         
         this.scene.add(this.mesh);
-        console.log('✅ Заменено на FBX модель монстра с подсветкой');
+        console.log('✅ Заменено на FBX модель монстра');
     }
     
     activate() {
@@ -155,47 +146,32 @@ export class Monster {
         this.position.set(35, 0, 30);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
-            console.log('👾 Монстр АКТИВИРОВАН на позиции:', this.position);
-            console.log('👾 Монстр начинает охоту за игроком!');
+            console.log('👾 Монстр АКТИВИРОВАН');
         }
     }
     
     update(playerPos, deltaTime) {
-        if (!this.active) {
-            return false;
-        }
+        if (!this.active) return false;
         
         const direction = new THREE.Vector3().subVectors(playerPos, this.position);
         const distance = direction.length();
         
-        // Отладочный вывод каждые 60 кадров
-        if (Math.random() < 0.02) {
-            console.log(`📏 Расстояние до монстра: ${distance.toFixed(2)}м | Позиция монстра: (${this.position.x.toFixed(1)}, ${this.position.z.toFixed(1)}) | Позиция игрока: (${playerPos.x.toFixed(1)}, ${playerPos.z.toFixed(1)})`);
+        // Хитбокс - увеличен радиус захвата для надёжности
+        if (distance < 1.3) {
+            console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
+            return true;
         }
         
-        // ПРОВЕРКА СТОЛКНОВЕНИЯ - увеличен радиус захвата
-        if (distance < 1.5) {
-            console.log('💀💀💀 МОНСТР СХВАТИЛ ИГРОКА! 💀💀💀');
-            console.log(`💀 Расстояние: ${distance.toFixed(2)}м`);
-            return true; // Игрок пойман
-        }
-        
-        // Преследование
         if (distance < 50) {
             direction.normalize();
-            // Скорость увеличивается при приближении
+            // Скорость увеличивается незначительно при приближении
             let currentSpeed = this.speed;
-            if (distance < 10) {
-                currentSpeed = this.speed * 1.8; // Ускорение когда близко
-                console.log(`🏃‍♂️ Монстр ускоряется! Скорость: ${currentSpeed.toFixed(1)}`);
-            } else if (distance < 20) {
-                currentSpeed = this.speed * 1.4;
-            }
+            if (distance < 8) currentSpeed = this.speed * 1.4;
+            else if (distance < 15) currentSpeed = this.speed * 1.2;
             
             const move = direction.multiplyScalar(currentSpeed * deltaTime);
             this.position.add(move);
             
-            // Границы острова
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
             this.position.y = 0;
@@ -205,7 +181,6 @@ export class Monster {
                 const angle = Math.atan2(direction.x, direction.z);
                 this.mesh.rotation.y = angle;
                 
-                // Анимация при движении
                 const time = Date.now() * 0.012;
                 const scale = 1 + Math.sin(time) * 0.05;
                 this.mesh.scale.set(scale, scale, scale);
