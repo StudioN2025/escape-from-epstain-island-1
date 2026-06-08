@@ -6,14 +6,12 @@ import { World } from './src/World.js';
 import { Inventory } from './src/Inventory.js';
 import { StoryManager } from './src/StoryManager.js';
 import { UIManager } from './src/UI.js';
-import { PostProcessing } from './src/PostProcessing.js';
 
 class Game {
     constructor() {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
-        this.postProcessing = null;
         this.player = null;
         this.monster = null;
         this.world = null;
@@ -35,12 +33,15 @@ class Game {
         this.pointerLocked = false;
         this.loadingProgress = 0;
         
-        // Настройки по умолчанию
+        // Стамина
+        this.stamina = 100;
+        this.maxStamina = 100;
+        this.inventoryOpen = false;
+        
+        // Настройки
         this.settings = {
             shadows: true,
-            postProcessing: true,
-            quality: 'medium',
-            drawDistance: 'medium'
+            brightness: 0.55
         };
         
         this.loadSettings();
@@ -56,23 +57,23 @@ class Game {
             } catch(e) {}
         }
         
-        // Применяем кнопки в меню
         setTimeout(() => {
             const shadowsToggle = document.getElementById('shadows-toggle');
-            const ppToggle = document.getElementById('postprocessing-toggle');
-            const qualitySelect = document.getElementById('quality-select');
-            const distanceSelect = document.getElementById('distance-select');
-            
+            const brightnessSlider = document.getElementById('brightness-slider');
             if (shadowsToggle) shadowsToggle.checked = this.settings.shadows;
-            if (ppToggle) ppToggle.checked = this.settings.postProcessing;
-            if (qualitySelect) qualitySelect.value = this.settings.quality;
-            if (distanceSelect) distanceSelect.value = this.settings.drawDistance;
+            if (brightnessSlider) brightnessSlider.value = this.settings.brightness;
         }, 100);
     }
     
     saveSettings() {
         localStorage.setItem('gameSettings', JSON.stringify(this.settings));
         console.log('💾 Настройки сохранены');
+        
+        // Применяем яркость
+        if (this.world) {
+            this.world.settings.brightness = this.settings.brightness;
+            this.world.setupSunLighting();
+        }
     }
     
     updateLoadingProgress(percent, status) {
@@ -90,43 +91,40 @@ class Game {
         this.updateLoadingProgress(5, 'Инициализация рендерера...');
         this.setupRenderer();
         
-        this.updateLoadingProgress(15, 'Настройка постобработки...');
-        this.setupPostProcessing();
-        
-        this.updateLoadingProgress(25, 'Создание мира...');
+        this.updateLoadingProgress(15, 'Создание мира...');
         this.setupWorld();
         
-        this.updateLoadingProgress(35, 'Настройка освещения...');
+        this.updateLoadingProgress(25, 'Настройка освещения...');
         this.setupLighting();
         
-        this.updateLoadingProgress(45, 'Загрузка игрока...');
+        this.updateLoadingProgress(35, 'Загрузка игрока...');
         this.player = new Player(this.camera);
         
-        this.updateLoadingProgress(55, 'Загрузка монстра...');
+        this.updateLoadingProgress(45, 'Загрузка монстра...');
         this.monster = new Monster(this.scene);
         
-        this.updateLoadingProgress(65, 'Загрузка инвентаря...');
+        this.updateLoadingProgress(55, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
         
-        this.updateLoadingProgress(70, 'Загрузка интерфейса...');
+        this.updateLoadingProgress(60, 'Загрузка интерфейса...');
         this.ui = new UIManager();
         
-        this.updateLoadingProgress(75, 'Загрузка сюжета...');
+        this.updateLoadingProgress(65, 'Загрузка сюжета...');
         this.story = new StoryManager(this.ui, this.inventory);
         
         window.gameInstance = this;
         
-        this.updateLoadingProgress(80, 'Настройка управления...');
+        this.updateLoadingProgress(70, 'Настройка управления...');
         this.setupEventListeners();
         this.setupSettingsUI();
         
-        this.updateLoadingProgress(85, 'Создание подвала...');
+        this.updateLoadingProgress(75, 'Создание подвала...');
         await this.world.createBasement();
         
-        this.updateLoadingProgress(90, 'Создание объектов...');
+        this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         
-        this.updateLoadingProgress(93, 'Загрузка моделей монстра...');
+        this.updateLoadingProgress(90, 'Загрузка моделей монстра...');
         await this.loadMonsterFBX();
         
         this.updateLoadingProgress(100, 'Готово!');
@@ -160,35 +158,23 @@ class Game {
         
         if (settingsSave) {
             settingsSave.onclick = () => {
-                // Сохраняем настройки
                 this.settings.shadows = document.getElementById('shadows-toggle').checked;
-                this.settings.postProcessing = document.getElementById('postprocessing-toggle').checked;
-                this.settings.quality = document.getElementById('quality-select').value;
-                this.settings.drawDistance = document.getElementById('distance-select').value;
-                
+                this.settings.brightness = parseFloat(document.getElementById('brightness-slider').value);
                 this.saveSettings();
                 settingsScreen.classList.add('hidden');
-                
-                // Показываем сообщение о необходимости перезапуска
-                alert('Настройки сохранены. Перезапустите игру для применения изменений.');
+                alert('Настройки сохранены. Перезапустите игру для применения теней, яркость изменится сразу.');
+                // Перезагрузка мира для применения теней (проще перезапустить)
+                location.reload();
             };
         }
         
         if (settingsCancel) {
             settingsCancel.onclick = () => {
                 settingsScreen.classList.add('hidden');
-                // Восстанавливаем значения из сохранённых
                 document.getElementById('shadows-toggle').checked = this.settings.shadows;
-                document.getElementById('postprocessing-toggle').checked = this.settings.postProcessing;
-                document.getElementById('quality-select').value = this.settings.quality;
-                document.getElementById('distance-select').value = this.settings.drawDistance;
+                document.getElementById('brightness-slider').value = this.settings.brightness;
             };
         }
-    }
-    
-    setupPostProcessing() {
-        this.postProcessing = new PostProcessing(this.renderer, this.scene, this.camera, this.settings.postProcessing);
-        console.log('✨ Постобработка настроена');
     }
     
     async loadMonsterFBX() {
@@ -228,7 +214,7 @@ class Game {
             }, (xhr) => {
                 if (xhr.total) {
                     const percent = Math.floor((xhr.loaded / xhr.total) * 100);
-                    this.updateLoadingProgress(93 + Math.floor(percent * 0.07), `Загрузка модели: ${percent}%`);
+                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
                 }
             }, (error) => {
                 console.warn('⚠️ Не удалось загрузить FBX модель, используется стандартная');
@@ -295,8 +281,9 @@ class Game {
             if (e.code === 'KeyE' && this.gameActive) {
                 this.checkInteraction();
             }
-            if (e.code === 'ShiftLeft') {
-                this.player.sprint = true;
+            if (e.code === 'KeyF') {
+                e.preventDefault();
+                this.toggleInventory();
             }
             if (e.code === 'Space' && this.gameActive) {
                 e.preventDefault();
@@ -306,9 +293,6 @@ class Game {
         
         window.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
-            if (e.code === 'ShiftLeft') {
-                this.player.sprint = false;
-            }
         });
         
         document.addEventListener('mousemove', (e) => {
@@ -352,8 +336,15 @@ class Game {
         document.addEventListener('mozpointerlockchange', lockChange);
         
         window.addEventListener('contextmenu', (e) => e.preventDefault());
-        
         window.addEventListener('resize', () => this.onWindowResize());
+    }
+    
+    toggleInventory() {
+        this.inventoryOpen = !this.inventoryOpen;
+        const inventoryDiv = document.getElementById('inventory');
+        if (inventoryDiv) {
+            inventoryDiv.style.display = this.inventoryOpen ? 'flex' : 'none';
+        }
     }
     
     onWindowResize() {
@@ -363,10 +354,6 @@ class Game {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
-        
-        if (this.postProcessing) {
-            this.postProcessing.resize(width, height);
-        }
     }
     
     checkInteraction() {
@@ -401,6 +388,7 @@ class Game {
                 this.story.completeQuest('find_key');
                 this.ui.showMessage('🔑 Вы нашли ржавый ключ! Похоже, он открывает дверь наверх...', 3000);
                 this.world.showExitDoor();
+                // Удаляем модель ключа из сцены (она уже удалена в колбэке)
                 break;
             case 'door':
                 if (this.inventory.hasItem('key')) {
@@ -458,7 +446,18 @@ class Game {
     }
     
     updateMovement(deltaTime) {
-        const speed = this.player.sprint ? 5.5 : 3.8;
+        // Стамина и скорость
+        let speed = 3.8;
+        let isSprinting = false;
+        
+        if (this.keys['ShiftLeft'] && this.stamina > 0 && this.gameActive) {
+            speed = 5.5;
+            isSprinting = true;
+            this.stamina = Math.max(0, this.stamina - deltaTime * 25);
+        } else if (!this.keys['ShiftLeft']) {
+            this.stamina = Math.min(this.maxStamina, this.stamina + deltaTime * 15);
+        }
+        
         const moveDistance = speed * deltaTime;
         
         const forward = new THREE.Vector3();
@@ -536,6 +535,12 @@ class Game {
                 }
             }
         }
+        
+        // Обновляем отображение стамины (можно добавить индикатор в UI)
+        const staminaElem = document.getElementById('stamina-value');
+        if (staminaElem) {
+            staminaElem.style.width = `${(this.stamina / this.maxStamina) * 100}%`;
+        }
     }
     
     animate() {
@@ -551,11 +556,7 @@ class Game {
             this.updateMovement(deltaTime);
         }
         
-        if (this.postProcessing && this.postProcessing.enabled) {
-            this.postProcessing.render();
-        } else if (this.renderer) {
-            this.renderer.render(this.scene, this.camera);
-        }
+        this.renderer.render(this.scene, this.camera);
     }
     
     showMenu() {
@@ -611,9 +612,11 @@ class Game {
             this.monster.mesh.position.copy(this.monster.position);
         }
         
+        this.stamina = this.maxStamina;
+        
         setTimeout(() => {
             if (this.gameActive) {
-                this.ui.showMessage('🎮 Используйте WASD для движения, мышь для осмотра, Shift для бега, Пробел для прыжка, E для взаимодействия', 5000);
+                this.ui.showMessage('🎮 Используйте WASD для движения, мышь для осмотра, Shift для бега, Пробел для прыжка, E для взаимодействия, F - инвентарь', 5000);
             }
         }, 1000);
     }
