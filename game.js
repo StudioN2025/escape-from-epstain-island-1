@@ -33,13 +33,11 @@ class Game {
         this.pointerLocked = false;
         this.loadingProgress = 0;
         
-        // Стамина
         this.stamina = 100;
         this.maxStamina = 100;
         this.inventoryOpen = false;
-        this.boatQuestStarted = false;  // флаг, что квест с бензином уже активирован
+        this.boatQuestStarted = false;
         
-        // Настройки
         this.settings = {
             shadows: true,
             brightness: 0.55
@@ -370,16 +368,28 @@ class Game {
         if (this.keys['KeyD']) move.sub(right);
         if (move.length()) move.normalize();
         move.multiplyScalar(moveDist);
-        this.player.position.add(move);
+        
+        let newPos = this.player.position.clone().add(move);
+        
+        // Применяем коллизии только в подвале
+        if (this.gamePhase === 'basement' && this.world && this.world.collidables) {
+            newPos = this.world.resolveCollision(newPos);
+        }
+        
+        this.player.position.copy(newPos);
+        
         const bounds = this.gamePhase === 'basement' ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 } : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
         this.player.updatePhysics(deltaTime, bounds);
         this.camera.position.copy(this.player.position);
+        
         if (this.world && this.gamePhase === 'island') this.world.updatePlayerPosition(this.player.position);
+        
         if (move.length() > 0.01 && this.player.isGrounded) {
             this.camera.position.y = this.player.position.y + Math.sin(Date.now() * 0.012) * 0.02;
         } else {
             this.camera.position.y = this.player.position.y;
         }
+        
         if (this.gamePhase === 'island' && this.gameActive) {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) { this.gameOver(); return; }
@@ -392,11 +402,13 @@ class Game {
                 else { el.innerHTML = '🟢 ДАЛЕКО'; el.style.color = '#44ff44'; }
             }
         }
+        
         if (this.gamePhase === 'basement' && this.world.exitDoor) {
             const d = this.player.position.distanceTo(this.world.exitDoor.position);
             const de = document.getElementById('distance-indicator');
             if (de) { de.innerText = d.toFixed(1); de.style.color = d < 2 ? '#ffaa44' : '#fff'; }
         }
+        
         const staminaDiv = document.getElementById('stamina-value');
         if (staminaDiv) staminaDiv.style.width = `${(this.stamina / this.maxStamina) * 100}%`;
     }
