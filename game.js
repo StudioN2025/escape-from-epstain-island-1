@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Player } from './src/Player.js';
-import { Monster } from './src/Monster.js';
+import { Monster } from './src/Monster.js';   // класс Monster переименовывать не будем, но внутри поменяем тексты
 import { World } from './src/World.js';
 import { Inventory } from './src/Inventory.js';
 import { StoryManager } from './src/StoryManager.js';
 import { UIManager } from './src/UI.js';
 
-class Game {
+export class Game {
     constructor() {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
         this.player = null;
-        this.monster = null;
+        this.epstein = null;        // вместо monster
         this.world = null;
         this.inventory = null;
         this.story = null;
@@ -44,7 +44,6 @@ class Game {
         this.originalCameraPos = null;
         this.deathSound = null;
         
-        // Победа
         this.isWinning = false;
         this.winTimer = 0;
         this.winDuration = 3.0;
@@ -56,7 +55,7 @@ class Game {
         };
         
         this.loadSettings();
-        this.init();
+        // Не вызываем init здесь, ждём start()
     }
     
     loadSettings() {
@@ -67,12 +66,6 @@ class Game {
                 this.settings = { ...this.settings, ...parsed };
             } catch(e) {}
         }
-        setTimeout(() => {
-            const shadowsToggle = document.getElementById('shadows-toggle');
-            const brightnessSlider = document.getElementById('brightness-slider');
-            if (shadowsToggle) shadowsToggle.checked = this.settings.shadows;
-            if (brightnessSlider) brightnessSlider.value = this.settings.brightness;
-        }, 100);
     }
     
     saveSettings() {
@@ -86,12 +79,8 @@ class Game {
     
     updateLoadingProgress(percent, status) {
         this.loadingProgress = percent;
-        const loadingBar = document.getElementById('loading-bar');
-        const loadingPercent = document.getElementById('loading-percent');
-        const loadingStatus = document.getElementById('loading-status');
-        if (loadingBar) loadingBar.style.width = percent + '%';
-        if (loadingPercent) loadingPercent.innerText = percent + '%';
-        if (loadingStatus) loadingStatus.innerText = status;
+        // Можно добавить индикатор в DOM, если нужно
+        console.log(`Загрузка: ${percent}% - ${status}`);
     }
     
     async init() {
@@ -103,8 +92,8 @@ class Game {
         this.setupLighting();
         this.updateLoadingProgress(35, 'Загрузка игрока...');
         this.player = new Player(this.camera);
-        this.updateLoadingProgress(45, 'Загрузка монстра...');
-        this.monster = new Monster(this.scene);
+        this.updateLoadingProgress(45, 'Загрузка Эпштейна...');
+        this.epstein = new Monster(this.scene); // но внутри Monster.js заменим название класса на Epstein? Пока оставим как есть, только тексты.
         this.updateLoadingProgress(55, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
         this.updateLoadingProgress(60, 'Загрузка интерфейса...');
@@ -114,13 +103,12 @@ class Game {
         window.gameInstance = this;
         this.updateLoadingProgress(70, 'Настройка управления...');
         this.setupEventListeners();
-        this.setupSettingsUI();
         this.updateLoadingProgress(75, 'Создание подвала...');
         await this.world.createBasement();
         this.updateLoadingProgress(85, 'Создание объектов...');
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
-        this.updateLoadingProgress(90, 'Загрузка моделей монстра...');
-        await this.loadMonsterFBX();
+        this.updateLoadingProgress(90, 'Загрузка модели Эпштейна...');
+        await this.loadEpsteinFBX();
         
         this.deathSound = new Audio('assets/sounds/death.mp3');
         this.deathSound.load();
@@ -130,52 +118,22 @@ class Game {
         this.updateLoadingProgress(100, 'Готово!');
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    this.showMenu();
-                }, 500);
-            }
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            this.startGame();
         }, 500);
         this.animate();
         this.story.startGame();
     }
     
-    setupSettingsUI() {
-        const settingsBtn = document.getElementById('settings-btn');
-        const settingsScreen = document.getElementById('settings-screen');
-        const settingsSave = document.getElementById('settings-save');
-        const settingsCancel = document.getElementById('settings-cancel');
-        if (settingsBtn) settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
-        if (settingsSave) {
-            settingsSave.onclick = () => {
-                this.settings.shadows = document.getElementById('shadows-toggle').checked;
-                this.settings.brightness = parseFloat(document.getElementById('brightness-slider').value);
-                this.saveSettings();
-                settingsScreen.classList.add('hidden');
-                alert('Настройки сохранены. Перезапустите игру для применения теней, яркость изменится сразу.');
-                location.reload();
-            };
-        }
-        if (settingsCancel) {
-            settingsCancel.onclick = () => {
-                settingsScreen.classList.add('hidden');
-                document.getElementById('shadows-toggle').checked = this.settings.shadows;
-                document.getElementById('brightness-slider').value = this.settings.brightness;
-            };
-        }
-    }
-    
-    async loadMonsterFBX() {
+    async loadEpsteinFBX() {
         const loader = new FBXLoader();
-        const fbxPath = 'assets/models/monster.fbx';
+        const fbxPath = 'assets/models/epstein_run.fbx'; // модель бегущего Эпштейна
         return new Promise((resolve) => {
             loader.load(fbxPath, (fbx) => {
-                console.log('✅ FBX модель монстра загружена');
-                if (this.monster.mesh) this.scene.remove(this.monster.mesh);
+                console.log('✅ Модель Эпштейна загружена');
+                if (this.epstein.mesh) this.scene.remove(this.epstein.mesh);
                 fbx.scale.setScalar(0.02);
-                fbx.position.copy(this.monster.position);
+                fbx.position.copy(this.epstein.position);
                 fbx.castShadow = this.settings.shadows;
                 this.fbxMixer = new THREE.AnimationMixer(fbx);
                 if (fbx.animations.length) {
@@ -183,16 +141,19 @@ class Game {
                     action.play();
                 }
                 this.scene.add(fbx);
-                this.monster.mesh = fbx;
-                this.monster.useFBX = true;
-                this.monster.mixer = this.fbxMixer;
+                this.epstein.mesh = fbx;
+                this.epstein.useFBX = true;
+                this.epstein.mixer = this.fbxMixer;
                 resolve(true);
             }, (xhr) => {
                 if (xhr.total) {
                     const percent = Math.floor((xhr.loaded / xhr.total) * 100);
-                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели: ${percent}%`);
+                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели Эпштейна: ${percent}%`);
                 }
-            }, () => resolve(false));
+            }, () => {
+                console.warn('⚠️ Модель epstein_run.fbx не найдена, использую стандартную сферу');
+                resolve(false);
+            });
         });
     }
     
@@ -336,14 +297,14 @@ class Game {
         setTimeout(() => {
             this.gamePhase = 'island';
             this.world.createIsland();
-            this.monster.activate();
+            this.epstein.activate();
             this.story.completeQuest('escape_basement');
             this.story.addQuest('find_boat', '🛶 Найдите лодку на острове');
             this.ui.updateQuest('🛶 Найдите лодку на острове');
             this.player.position.set(0, 1.6, 5);
             this.camera.position.copy(this.player.position);
             setTimeout(() => {
-                if (this.gameActive) this.ui.showMessage('👹 Вы слышите рычание вдалеке... Монстр приближается!', 4000);
+                if (this.gameActive) this.ui.showMessage('👔 Вы слышите шаги... Эпштейн приближается!', 4000);
             }, 1000);
         }, 2000);
     }
@@ -370,14 +331,12 @@ class Game {
         if (document.exitPointerLock) document.exitPointerLock();
         const overlay = document.getElementById('win-overlay');
         if (overlay) overlay.style.opacity = '0';
-        // Скрыть UI, чтобы не мешал
         document.getElementById('game-ui')?.classList.add('hidden');
     }
     
     updateWinSequence(deltaTime) {
         this.winTimer += deltaTime;
         const t = Math.min(1.0, this.winTimer / this.winDuration);
-        // Целевая позиция камеры: высоко над островом
         const targetPos = new THREE.Vector3(0, 20, 30);
         this.camera.position.lerpVectors(this.originalCameraPos, targetPos, t);
         this.camera.lookAt(0, 0, 0);
@@ -407,14 +366,14 @@ class Game {
     updateDeathSequence(deltaTime) {
         this.deathTimer += deltaTime;
         const t = Math.min(1.0, this.deathTimer / this.deathDuration);
-        const monsterPos = this.monster.position.clone();
-        monsterPos.y += 1.0;
-        const targetCamPos = monsterPos.clone();
+        const epsteinPos = this.epstein.position.clone();
+        epsteinPos.y += 1.0;
+        const targetCamPos = epsteinPos.clone();
         targetCamPos.z += 1.2;
         targetCamPos.x += 0.3;
-        targetCamPos.y = monsterPos.y + 0.5;
+        targetCamPos.y = epsteinPos.y + 0.5;
         this.camera.position.lerpVectors(this.originalCameraPos, targetCamPos, t);
-        this.camera.lookAt(monsterPos);
+        this.camera.lookAt(epsteinPos);
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = Math.min(1.0, t * 1.5);
         if (t >= 1.0) {
@@ -474,18 +433,18 @@ class Game {
         }
         
         if (this.gamePhase === 'island' && this.gameActive && !this.isDying && !this.isWinning) {
-            const caught = this.monster.update(this.player.position, deltaTime);
+            const caught = this.epstein.update(this.player.position, deltaTime);
             if (caught) {
                 this.startDeathSequence();
                 return;
             }
-            const d = this.player.position.distanceTo(this.monster.position);
+            const d = this.player.position.distanceTo(this.epstein.position);
             const el = document.getElementById('monster-status');
             if (el) {
-                if (d < 5) { el.innerHTML = '⚠️ ОЧЕНЬ БЛИЗКО! ⚠️'; el.style.color = '#ff0000'; }
-                else if (d < 10) { el.innerHTML = '🔴 ОПАСНО!'; el.style.color = '#ff6600'; }
-                else if (d < 20) { el.innerHTML = '🟡 НЕДАЛЕКО'; el.style.color = '#ffaa44'; }
-                else { el.innerHTML = '🟢 ДАЛЕКО'; el.style.color = '#44ff44'; }
+                if (d < 5) { el.innerHTML = '⚠️ ЭПШТЕЙН РЯДОМ! ⚠️'; el.style.color = '#ff0000'; }
+                else if (d < 10) { el.innerHTML = '🔴 ЭПШТЕЙН БЛИЗКО'; el.style.color = '#ff6600'; }
+                else if (d < 20) { el.innerHTML = '🟡 ЭПШТЕЙН НЕДАЛЕКО'; el.style.color = '#ffaa44'; }
+                else { el.innerHTML = '🟢 ЭПШТЕЙН ДАЛЕКО'; el.style.color = '#44ff44'; }
             }
         }
         
@@ -515,45 +474,7 @@ class Game {
         this.renderer.render(this.scene, this.camera);
     }
     
-    showMenu() {
-        this.gameActive = false;
-        this.ui.showMenu();
-        document.getElementById('game-ui')?.classList.add('hidden');
-        const start = document.getElementById('start-game');
-        const restart = document.getElementById('restart-game');
-        if (start) start.onclick = () => this.startGame();
-        if (restart) restart.onclick = () => location.reload();
-        document.getElementById('retry-btn')?.addEventListener('click', () => location.reload());
-        document.getElementById('play-again')?.addEventListener('click', () => location.reload());
-    }
-    
-    startGame() {
-        const deathOverlay = document.getElementById('death-overlay');
-        const winOverlay = document.getElementById('win-overlay');
-        if (deathOverlay) deathOverlay.style.opacity = '0';
-        if (winOverlay) winOverlay.style.opacity = '0';
-        this.gameActive = true;
-        this.isDying = false;
-        this.isWinning = false;
-        this.gamePhase = 'basement';
-        this.boatQuestStarted = false;
-        this.ui.hideMenu();
-        document.getElementById('game-ui')?.classList.remove('hidden');
-        this.player.position.set(0, 1.6, 0);
-        this.player.velocity.set(0, 0, 0);
-        this.camera.position.copy(this.player.position);
-        this.story.startGame();
-        this.monster.active = false;
-        this.monster.position.set(35, 0, 30);
-        if (this.monster.mesh) this.monster.mesh.position.copy(this.monster.position);
-        this.stamina = this.maxStamina;
-        setTimeout(() => {
-            if (this.gameActive) this.ui.showMessage('WASD – движение, мышь – осмотр, Shift – бег, Пробел – прыжок, E – взять, F – инвентарь', 5000);
-        }, 1000);
+    start() {
+        this.init();
     }
 }
-
-const game = new Game();
-setTimeout(() => {
-    if (game.monster?.mesh) console.log('✅ Монстр готов');
-}, 2000);
