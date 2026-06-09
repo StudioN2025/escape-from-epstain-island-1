@@ -5,7 +5,7 @@ export class Monster {
         this.scene = scene;
         this.mesh = null;
         this.active = false;
-        this.speed = 4.5; // быстрее ходьбы (3.8), медленнее бега (5.5)
+        this.speed = 4.0; // быстрее ходьбы (3.8), медленнее бега (5.5)
         this.position = new THREE.Vector3(35, 0, 30);
         this.useFBX = false;
         this.mixer = null;
