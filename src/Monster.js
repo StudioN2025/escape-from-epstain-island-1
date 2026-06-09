@@ -16,7 +16,6 @@ export class Monster {
         console.log('🟢 Создание стандартной модели монстра');
         
         const group = new THREE.Group();
-        
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ 
             color: 0xff6666, 
@@ -112,7 +111,6 @@ export class Monster {
         this.mesh = group;
         this.mesh.position.set(this.position.x, 0, this.position.z);
         this.scene.add(this.mesh);
-        
         console.log('✅ Монстр создан');
     }
     
@@ -155,11 +153,10 @@ export class Monster {
         
         if (distanceXZ < 50) {
             // Угол к игроку
-            let angle = Math.atan2(dz, dx);
-            // Зеркальный поворот (на 180 градусов)
-            angle += Math.PI;
-            this.mesh.rotation.y = angle;
+            const angle = Math.atan2(dz, dx);
+            this.mesh.rotation.y = angle; // правильный поворот лицом к игроку
             
+            // Движение к игроку
             const moveX = Math.cos(angle) * this.speed * deltaTime;
             const moveZ = Math.sin(angle) * this.speed * deltaTime;
             this.position.x += moveX;
