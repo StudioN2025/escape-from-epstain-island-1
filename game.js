@@ -78,7 +78,6 @@ export class Game {
     
     updateLoadingProgress(percent, status) {
         this.loadingProgress = percent;
-        // Можно добавить индикатор в DOM, если нужно
         console.log(`Загрузка: ${percent}% - ${status}`);
     }
     
@@ -118,7 +117,6 @@ export class Game {
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) loadingScreen.style.display = 'none';
-            // Показываем игровой UI
             document.getElementById('game-ui')?.classList.remove('hidden');
             this.gameActive = true;
             this.story.startGame();
@@ -259,6 +257,7 @@ export class Game {
     handleInteraction(type, data) {
         switch(type) {
             case 'key':
+                console.log('🔑 Ключ подобран! Добавляем в инвентарь');
                 this.inventory.addItem('key', '🔑');
                 this.story.completeQuest('find_key');
                 this.ui.showMessage('🔑 Вы нашли ключ!', 3000);
