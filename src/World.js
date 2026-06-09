@@ -572,7 +572,7 @@ export class World {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             // Увеличиваем дом: целевой размер 8.0 вместо 5.0
-            const targetSize = 8.0;
+            const targetSize = 10.0;
             const scale = targetSize / Math.max(size.x, size.y, size.z);
             model.scale.setScalar(scale);
             // Поднимаем выше: y = 0.5 вместо -0.5, чтобы дом стоял на земле, но казался выше
@@ -589,7 +589,7 @@ export class World {
         } else {
             console.warn('⚠️ Модель дома ещё не загружена, использую простую коробку');
             const fallback = new THREE.Mesh(new THREE.BoxGeometry(6,5,6), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
-            fallback.position.set(0, 0.5, 0);
+            fallback.position.set(0, 2, 0);
             fallback.castShadow = true;
             this.scene.add(fallback);
             this.objects.push(fallback);
