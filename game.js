@@ -370,13 +370,13 @@ class Game {
         const t = Math.min(1.0, this.deathTimer / this.deathDuration);
         
         const monsterPos = this.monster.position.clone();
-        monsterPos.y += 1.0; // уровень лица
+        monsterPos.y += 1.0; // высота лица
         
-        // Камера выше и с другой стороны (сзади-слева от монстра)
+        // Камера приближается к монстру: спереди на расстоянии 1.2 м
         const targetCamPos = monsterPos.clone();
-        targetCamPos.x -= 2.5;
-        targetCamPos.z -= 2.5;
-        targetCamPos.y = monsterPos.y + 1.2;
+        targetCamPos.z += 1.2; // перед мордой
+        targetCamPos.x += 0.3; // небольшой сдвиг для ракурса
+        targetCamPos.y = monsterPos.y + 0.5;
         
         this.camera.position.lerpVectors(this.originalCameraPos, targetCamPos, t);
         this.camera.lookAt(monsterPos);
@@ -391,7 +391,6 @@ class Game {
     }
     
     gameOver() {
-        // Оставляем экран черным
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = '1';
         this.ui.showGameOver();
@@ -492,7 +491,6 @@ class Game {
     }
     
     startGame() {
-        // Сброс затемнения
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = '0';
         this.gameActive = true;
