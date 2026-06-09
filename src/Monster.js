@@ -5,7 +5,7 @@ export class Monster {
         this.scene = scene;
         this.mesh = null;
         this.active = false;
-        this.speed = 4.0; // быстрее ходьбы (3.8), медленнее бега (5.5)
+        this.speed = 4.0;
         this.position = new THREE.Vector3(35, 0, 30);
         this.useFBX = false;
         this.mixer = null;
@@ -113,23 +113,7 @@ export class Monster {
         this.mesh.position.set(this.position.x, 0, this.position.z);
         this.scene.add(this.mesh);
         
-        console.log('✅ Монстр создан на позиции:', this.mesh.position);
-        
-        const debugBox = new THREE.Mesh(
-            new THREE.BoxGeometry(1.3, 1.3, 1.3),
-            new THREE.MeshBasicMaterial({ color: 0xffaa44, wireframe: true, transparent: true, opacity: 0.3 })
-        );
-        debugBox.position.set(0, 0, 0);
-        this.mesh.add(debugBox);
-        
-        const animateLights = () => {
-            requestAnimationFrame(animateLights);
-            if (this.mesh && this.mesh.parent) {
-                const intensity = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
-                monsterLight.intensity = intensity;
-            }
-        };
-        animateLights();
+        console.log('✅ Монстр создан');
     }
     
     replaceWithFBX(fbx) {
@@ -141,13 +125,11 @@ export class Monster {
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
         this.useFBX = true;
-        
         const fbxLight = new THREE.PointLight(0xff6633, 0.8, 15);
         fbxLight.position.set(0, 0.5, 0);
         this.mesh.add(fbxLight);
-        
         this.scene.add(this.mesh);
-        console.log('✅ Заменено на FBX модель монстра с подсветкой');
+        console.log('✅ Заменено на FBX модель монстра');
     }
     
     activate() {
@@ -155,46 +137,44 @@ export class Monster {
         this.position.set(35, 0, 30);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
-            console.log('👾 Монстр АКТИВИРОВАН (скорость 4.5)');
+            console.log('👾 Монстр активирован, скорость 4.0');
         }
     }
     
     update(playerPos, deltaTime) {
-    if (!this.active) return false;
-    
-    const dx = playerPos.x - this.position.x;
-    const dz = playerPos.z - this.position.z;
-    const distanceXZ = Math.sqrt(dx*dx + dz*dz);
-    
-    // Проверка захвата
-    if (distanceXZ < 1.4) {
-        console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
-        return true;
+        if (!this.active) return false;
+        
+        const dx = playerPos.x - this.position.x;
+        const dz = playerPos.z - this.position.z;
+        const distanceXZ = Math.sqrt(dx*dx + dz*dz);
+        
+        if (distanceXZ < 1.4) {
+            console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
+            return true;
+        }
+        
+        if (distanceXZ < 50) {
+            // Угол к игроку
+            let angle = Math.atan2(dz, dx);
+            // Зеркальный поворот (на 180 градусов)
+            angle += Math.PI;
+            this.mesh.rotation.y = angle;
+            
+            const moveX = Math.cos(angle) * this.speed * deltaTime;
+            const moveZ = Math.sin(angle) * this.speed * deltaTime;
+            this.position.x += moveX;
+            this.position.z += moveZ;
+            
+            this.position.x = Math.max(-47, Math.min(47, this.position.x));
+            this.position.z = Math.max(-47, Math.min(47, this.position.z));
+            this.position.y = 0;
+            this.mesh.position.copy(this.position);
+            
+            const time = Date.now() * 0.012;
+            const scale = 1 + Math.sin(time) * 0.05;
+            this.mesh.scale.set(scale, scale, scale);
+        }
+        
+        return false;
     }
-    
-    if (distanceXZ < 50) {
-        // Мгновенный поворот лицом к игроку
-        const angle = Math.atan2(dz, dx);
-        this.mesh.rotation.y = angle;
-        
-        // Движение
-        const moveX = Math.cos(angle) * this.speed * deltaTime;
-        const moveZ = Math.sin(angle) * this.speed * deltaTime;
-        this.position.x += moveX;
-        this.position.z += moveZ;
-        
-        // Границы
-        this.position.x = Math.max(-47, Math.min(47, this.position.x));
-        this.position.z = Math.max(-47, Math.min(47, this.position.z));
-        this.position.y = 0;
-        this.mesh.position.copy(this.position);
-        
-        // Анимация пульсации
-        const time = Date.now() * 0.012;
-        const scale = 1 + Math.sin(time) * 0.05;
-        this.mesh.scale.set(scale, scale, scale);
-    }
-    
-    return false;
-}
 }
