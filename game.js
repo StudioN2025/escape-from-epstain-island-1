@@ -38,6 +38,13 @@ class Game {
         this.inventoryOpen = false;
         this.boatQuestStarted = false;
         
+        // Смерть
+        this.isDying = false;
+        this.deathTimer = 0;
+        this.deathDuration = 2.0; // секунды
+        this.originalCameraPos = null;
+        this.deathSound = null;
+        
         this.settings = {
             shadows: true,
             brightness: 0.55
@@ -109,6 +116,11 @@ class Game {
         this.world.createInteractiveObjects(this.handleInteraction.bind(this));
         this.updateLoadingProgress(90, 'Загрузка моделей монстра...');
         await this.loadMonsterFBX();
+        
+        // Загрузка звука смерти
+        this.deathSound = new Audio('assets/sounds/death.mp3');
+        this.deathSound.load();
+        
         this.updateLoadingProgress(100, 'Готово!');
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
@@ -339,14 +351,62 @@ class Game {
         document.getElementById('game-ui')?.classList.add('hidden');
     }
     
+    // Запуск эффекта смерти
+    startDeathSequence() {
+        if (this.isDying) return;
+        this.isDying = true;
+        this.gameActive = false; // отключаем управление
+        this.originalCameraPos = this.camera.position.clone();
+        this.deathTimer = 0;
+        // Затемнение через CSS overlay
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        if (this.deathSound) {
+            this.deathSound.currentTime = 0;
+            this.deathSound.play().catch(e => console.log('Audio play error:', e));
+        }
+        // Дополнительно можно выключить указатель мыши
+        if (document.exitPointerLock) document.exitPointerLock();
+    }
+    
+    updateDeathSequence(deltaTime) {
+        this.deathTimer += deltaTime;
+        const t = Math.min(1.0, this.deathTimer / this.deathDuration);
+        
+        // Движение камеры к монстру
+        const monsterPos = this.monster.position.clone();
+        monsterPos.y += 1.0; // смотреть в лицо
+        const targetCamPos = monsterPos.clone();
+        targetCamPos.z += 1.5; // небольшое смещение, чтобы видеть монстра
+        targetCamPos.x += 0.5;
+        targetCamPos.y = monsterPos.y;
+        
+        this.camera.position.lerpVectors(this.originalCameraPos, targetCamPos, t);
+        this.camera.lookAt(monsterPos);
+        
+        // Затемнение
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) overlay.style.opacity = Math.min(1.0, t * 1.5);
+        
+        if (t >= 1.0) {
+            this.isDying = false;
+            this.gameOver();
+        }
+    }
+    
     gameOver() {
-        this.gameActive = false;
+        // Сброс затемнения
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) overlay.style.opacity = '0';
         this.ui.showGameOver();
         if (document.exitPointerLock) document.exitPointerLock();
         document.getElementById('game-ui')?.classList.add('hidden');
     }
     
     updateMovement(deltaTime) {
+        // Если идёт смерть, не обрабатываем движение
+        if (this.isDying) return;
+        
         let speed = 3.8;
         if (this.keys['ShiftLeft'] && this.stamina > 0 && this.gameActive) {
             speed = 5.5;
@@ -371,7 +431,6 @@ class Game {
         
         let newPos = this.player.position.clone().add(move);
         
-        // Применяем коллизии только в подвале
         if (this.gamePhase === 'basement' && this.world && this.world.collidables) {
             newPos = this.world.resolveCollision(newPos);
         }
@@ -390,9 +449,12 @@ class Game {
             this.camera.position.y = this.player.position.y;
         }
         
-        if (this.gamePhase === 'island' && this.gameActive) {
+        if (this.gamePhase === 'island' && this.gameActive && !this.isDying) {
             const caught = this.monster.update(this.player.position, deltaTime);
-            if (caught) { this.gameOver(); return; }
+            if (caught) {
+                this.startDeathSequence();
+                return;
+            }
             const d = this.player.position.distanceTo(this.monster.position);
             const el = document.getElementById('monster-status');
             if (el) {
@@ -417,7 +479,13 @@ class Game {
         requestAnimationFrame(() => this.animate());
         const delta = Math.min(0.033, 1/60);
         if (this.fbxMixer) this.fbxMixer.update(delta);
-        if (this.gameActive) this.updateMovement(delta);
+        
+        if (this.isDying) {
+            this.updateDeathSequence(delta);
+        } else if (this.gameActive) {
+            this.updateMovement(delta);
+        }
+        
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -435,6 +503,7 @@ class Game {
     
     startGame() {
         this.gameActive = true;
+        this.isDying = false;
         this.gamePhase = 'basement';
         this.boatQuestStarted = false;
         this.ui.hideMenu();
