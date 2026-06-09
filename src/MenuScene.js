@@ -120,12 +120,14 @@ export class MenuScene {
             }
         }, undefined, (error) => {
             console.warn('⚠️ Модель flair.fbx не загружена, создаю заглушку', error);
-            const geometry = new THREE.SphereGeometry(0.7, 32, 32);
-            const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
-            const dummy = new THREE.Mesh(geometry, material);
-            dummy.position.set(1.5, 0.7, 1.5);
-            dummy.castShadow = true;
-            this.scene.add(dummy);
+            if (this.scene) {
+                const geometry = new THREE.SphereGeometry(0.7, 32, 32);
+                const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
+                const dummy = new THREE.Mesh(geometry, material);
+                dummy.position.set(1.5, 0.7, 1.5);
+                dummy.castShadow = true;
+                this.scene.add(dummy);
+            }
         });
         
         // Анимация (если нет анимации в FBX)
@@ -139,11 +141,10 @@ export class MenuScene {
             }
         };
         
-        // Музыка
+        // Музыка – пока не играем, только создаём объект
         this.audio = new Audio('assets/sounds/menu.mp3');
         this.audio.loop = true;
         this.audio.volume = 0.6;
-        this.audio.play().catch(e => console.log('Audio play error:', e));
         
         this.createStartButton();
         this.animate();
@@ -169,6 +170,10 @@ export class MenuScene {
         this.startButton.onmouseenter = () => this.startButton.style.transform = 'translateX(-50%) scale(1.05)';
         this.startButton.onmouseleave = () => this.startButton.style.transform = 'translateX(-50%) scale(1)';
         this.startButton.onclick = () => {
+            // Запускаем музыку при клике (разрешение пользователя)
+            if (this.audio) {
+                this.audio.play().catch(e => console.log('Audio play error:', e));
+            }
             this.dispose();
             if (this.onStart) this.onStart();
         };
