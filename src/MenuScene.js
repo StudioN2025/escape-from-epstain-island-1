@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { World } from './World.js';
 
 export class MenuScene {
     constructor(onStartCallback) {
@@ -15,16 +16,17 @@ export class MenuScene {
         this.clock = new THREE.Clock();
         this.startButton = null;
         this.animationId = null;
+        this.world = null; // для создания острова
         this.init();
     }
     
     init() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x6a8aad);
-        this.scene.fog = new THREE.FogExp2(0x6a8aad, 0.008);
+        this.scene.fog = new THREE.FogExp2(0x6a8aad, 0.003);
         
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(8, 5, 12);
+        this.camera.position.set(12, 8, 15);
         this.camera.lookAt(0, 2, 0);
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -36,73 +38,22 @@ export class MenuScene {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.autoRotate = true;
-        this.controls.autoRotateSpeed = 0.8;
+        this.controls.autoRotateSpeed = 0.5;
         this.controls.enableZoom = true;
-        this.controls.enablePan = true;
         this.controls.target.set(0, 2, 0);
         
-        // Освещение
-        const ambientLight = new THREE.AmbientLight(0x88aacc, 0.6);
-        this.scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffdd99, 1.0);
-        sunLight.position.set(10, 20, 5);
-        sunLight.castShadow = true;
-        this.scene.add(sunLight);
-        const fillLight = new THREE.PointLight(0x88aaff, 0.3);
-        fillLight.position.set(0, 5, 0);
-        this.scene.add(fillLight);
+        // Создаём остров через World (без подвала и монстра, только остров)
+        this.world = new World(this.scene, { shadows: true, brightness: 0.55 });
+        this.world.createIsland();   // создаёт остров с домом, пальмами, костром, лодкой
         
-        // Земля
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.9 });
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(25, 25), groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.5;
-        ground.receiveShadow = true;
-        this.scene.add(ground);
+        // Но лодка не нужна в меню, можно её скрыть, но не обязательно
         
-        // Песок
-        const sandMat = new THREE.MeshStandardMaterial({ color: 0xddbb77, roughness: 0.8 });
-        const sandRing = new THREE.Mesh(new THREE.RingGeometry(11, 13, 32), sandMat);
-        sandRing.rotation.x = -Math.PI / 2;
-        sandRing.position.y = -0.45;
-        sandRing.receiveShadow = true;
-        this.scene.add(sandRing);
-        
-        // Простые пальмы
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a2a });
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3a8a3a });
-        const palmPositions = [[-4, -0.5, 4], [5, -0.5, -3], [-3, -0.5, -4], [4, -0.5, 3]];
-        palmPositions.forEach(pos => {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.5, 6), trunkMat);
-            trunk.position.set(pos[0], pos[1] + 0.8, pos[2]);
-            trunk.castShadow = true;
-            const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.2, 8), foliageMat);
-            foliage1.position.set(pos[0], pos[1] + 1.7, pos[2]);
-            foliage1.castShadow = true;
-            const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.0, 8), foliageMat);
-            foliage2.position.set(pos[0], pos[1] + 2.5, pos[2]);
-            foliage2.castShadow = true;
-            this.scene.add(trunk, foliage1, foliage2);
-        });
-        
-        // Дом
-        const houseMat = new THREE.MeshStandardMaterial({ color: 0xaa8866 });
-        const house = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3, 3.5), houseMat);
-        house.position.set(0, 0.2, 0);
-        house.castShadow = true;
-        this.scene.add(house);
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0xcc6644 });
-        const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.3, 4), roofMat);
-        roof.position.set(0, 1.8, 0);
-        roof.castShadow = true;
-        this.scene.add(roof);
-        
-        // Загрузка модели Эпштейна для танца
+        // Загружаем танцующего Эпштейна
         const loader = new FBXLoader();
-        loader.load('assets/models/flair.fbx', (fbx) => {
+        loader.load('assets/models/dance.fbx', (fbx) => {
             this.epsteinModel = fbx;
             fbx.scale.setScalar(0.045);
-            fbx.position.set(1.5, 0, 1.5);
+            fbx.position.set(0, 0, 2); // перед домом
             fbx.rotation.y = -Math.PI / 4;
             fbx.castShadow = true;
             this.scene.add(fbx);
@@ -113,15 +64,16 @@ export class MenuScene {
                 console.log('🎬 Эпштейн танцует!');
             }
         }, undefined, (error) => {
-            console.warn('⚠️ Модель flair.fbx не загружена, создаю заглушку', error);
+            console.warn('⚠️ Модель dance.fbx не загружена, создаю заглушку', error);
             const geometry = new THREE.SphereGeometry(0.7, 32, 32);
             const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
             const dummy = new THREE.Mesh(geometry, material);
-            dummy.position.set(1.5, 0.7, 1.5);
+            dummy.position.set(0, 0.7, 2);
             dummy.castShadow = true;
             this.scene.add(dummy);
         });
         
+        // Анимация для заглушки
         this.animateEpstein = () => {
             if (this.mixer) this.mixer.update(this.clock.getDelta());
             else if (this.epsteinModel) {
@@ -131,6 +83,7 @@ export class MenuScene {
             }
         };
         
+        // Музыка
         this.audio = new Audio('assets/sounds/menu.mp3');
         this.audio.loop = true;
         this.audio.volume = 0.6;
