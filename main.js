@@ -41,6 +41,8 @@ async function startLoadingResources() {
         { type: 'model', path: 'assets/models/medieval_door.glb', name: 'door' },
         { type: 'model', path: 'assets/models/canister.glb', name: 'canister' },
         { type: 'model', path: 'assets/models/house.glb', name: 'house' },
+        { type: 'model', path: 'assets/models/dance.fbx', name: 'dance' },   // модель для меню
+        { type: 'model', path: 'assets/models/epstein_run.fbx', name: 'epstein_run' }, // опционально
         { type: 'sound', path: 'assets/sounds/menu.mp3', name: 'menu' },
         { type: 'sound', path: 'assets/sounds/death.mp3', name: 'death' },
         { type: 'sound', path: 'assets/sounds/win.mp3', name: 'win' },
@@ -65,32 +67,29 @@ async function startLoadingResources() {
         return new Promise((resolve) => {
             if (res.type === 'texture') {
                 textureLoader.load(res.path, (texture) => {
-                    updateProgress(`Загружена текстура: ${res.name}`);
+                    updateProgress(`Текстура: ${res.name}`);
                     resolve();
-                }, undefined, (err) => {
-                    console.warn(`Ошибка текстуры ${res.name}:`, err);
+                }, undefined, () => {
                     updateProgress(`Ошибка: ${res.name}`);
                     resolve();
                 });
             } else if (res.type === 'model') {
                 const loader = res.path.endsWith('.fbx') ? fbxLoader : gltfLoader;
                 loader.load(res.path, (model) => {
-                    updateProgress(`Загружена модель: ${res.name}`);
+                    updateProgress(`Модель: ${res.name}`);
                     resolve();
-                }, undefined, (err) => {
-                    console.warn(`Ошибка модели ${res.name}:`, err);
-                    updateProgress(`Ошибка: ${res.name}`);
+                }, undefined, () => {
+                    updateProgress(`Ошибка модели: ${res.name}`);
                     resolve();
                 });
             } else if (res.type === 'sound') {
                 const audio = new Audio(res.path);
                 audio.addEventListener('canplaythrough', () => {
-                    updateProgress(`Загружен звук: ${res.name}`);
+                    updateProgress(`Звук: ${res.name}`);
                     resolve();
                 });
                 audio.addEventListener('error', () => {
-                    console.warn(`Ошибка звука ${res.name}`);
-                    updateProgress(`Ошибка: ${res.name}`);
+                    updateProgress(`Ошибка звука: ${res.name}`);
                     resolve();
                 });
                 audio.load();
@@ -99,9 +98,10 @@ async function startLoadingResources() {
     });
     
     await Promise.all(loadPromises);
-    loadingStatus.innerText = 'Загрузка завершена!';
+    loadingStatus.innerText = 'Готово!';
     setTimeout(() => {
         loadingScreen.style.display = 'none';
+        // Создаём меню, передаём колбэк для запуска игры
         const menu = new MenuScene(() => {
             const game = new Game();
             game.start();
