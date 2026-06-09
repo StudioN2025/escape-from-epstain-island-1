@@ -5,7 +5,7 @@ export class Monster {
         this.scene = scene;
         this.mesh = null;
         this.active = false;
-        this.speed = 2.4; // уменьшено с 3.2
+        this.speed = 4.5; // быстрее ходьбы игрока (3.8), медленнее бега (5.5)
         this.position = new THREE.Vector3(35, 0, 30);
         this.useFBX = false;
         this.mixer = null;
@@ -17,9 +17,10 @@ export class Monster {
         
         const group = new THREE.Group();
         
+        // Основное тело
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ 
-            color: 0xff6666,
+            color: 0xff6666, 
             emissive: 0x442222,
             emissiveIntensity: 0.5,
             roughness: 0.2,
@@ -30,6 +31,7 @@ export class Monster {
         body.receiveShadow = true;
         group.add(body);
         
+        // Глаза
         const eyeMat = new THREE.MeshStandardMaterial({ 
             color: 0xff3333, 
             emissive: 0xff2222,
@@ -42,6 +44,7 @@ export class Monster {
         group.add(leftEye);
         group.add(rightEye);
         
+        // Зрачки
         const pupilMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
         const leftPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
         const rightPupil = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), pupilMat);
@@ -50,6 +53,7 @@ export class Monster {
         group.add(leftPupil);
         group.add(rightPupil);
         
+        // Блики
         const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const leftHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
         const rightHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), highlightMat);
@@ -58,12 +62,14 @@ export class Monster {
         group.add(leftHighlight);
         group.add(rightHighlight);
         
+        // Рот
         const mouthMat = new THREE.MeshStandardMaterial({ color: 0x883333 });
         const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 16, 32), mouthMat);
         mouth.rotation.x = 0.2;
         mouth.position.set(0, 0.05, 0.9);
         group.add(mouth);
         
+        // Зубы
         const toothMat = new THREE.MeshStandardMaterial({ color: 0xffffee });
         const teethPositions = [[-0.12, 0.0, 1.05], [0, 0.0, 1.07], [0.12, 0.0, 1.05]];
         teethPositions.forEach(pos => {
@@ -72,6 +78,7 @@ export class Monster {
             group.add(tooth);
         });
         
+        // Рога
         const hornMat = new THREE.MeshStandardMaterial({ color: 0xddaa77 });
         const leftHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
         const rightHorn = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), hornMat);
@@ -80,6 +87,7 @@ export class Monster {
         group.add(leftHorn);
         group.add(rightHorn);
         
+        // Ноги
         const legMat = new THREE.MeshStandardMaterial({ color: 0xcc5555 });
         const legPositions = [[-0.45, -0.75, 0.55], [0.45, -0.75, 0.55], [-0.45, -0.75, -0.35], [0.45, -0.75, -0.35]];
         legPositions.forEach(pos => {
@@ -89,6 +97,7 @@ export class Monster {
             group.add(leg);
         });
         
+        // Когти
         const clawMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
         const clawPositions = [[-0.5, -0.45, 0.9], [0.5, -0.45, 0.9], [-0.5, -0.45, -0.65], [0.5, -0.45, -0.65]];
         clawPositions.forEach(pos => {
@@ -97,6 +106,7 @@ export class Monster {
             group.add(claw);
         });
         
+        // Шипы на спине
         const spikeMat = new THREE.MeshStandardMaterial({ color: 0xdd6666 });
         const spikePositions = [[0, 0.25, -0.85], [0.3, 0.15, -0.9], [-0.3, 0.15, -0.9], [0.15, -0.05, -0.95], [-0.15, -0.05, -0.95]];
         spikePositions.forEach(pos => {
@@ -105,6 +115,7 @@ export class Monster {
             group.add(spike);
         });
         
+        // Собственный свет
         const monsterLight = new THREE.PointLight(0xff6633, 0.8, 15);
         monsterLight.position.set(0, 0.5, 0);
         group.add(monsterLight);
@@ -121,6 +132,15 @@ export class Monster {
         );
         debugBox.position.set(0, 0, 0);
         this.mesh.add(debugBox);
+        
+        const animateLights = () => {
+            requestAnimationFrame(animateLights);
+            if (this.mesh && this.mesh.parent) {
+                const intensity = 0.6 + Math.sin(Date.now() * 0.008) * 0.3;
+                monsterLight.intensity = intensity;
+            }
+        };
+        animateLights();
     }
     
     replaceWithFBX(fbx) {
@@ -138,7 +158,7 @@ export class Monster {
         this.mesh.add(fbxLight);
         
         this.scene.add(this.mesh);
-        console.log('✅ Заменено на FBX модель монстра');
+        console.log('✅ Заменено на FBX модель монстра с подсветкой');
     }
     
     activate() {
@@ -146,7 +166,7 @@ export class Monster {
         this.position.set(35, 0, 30);
         if (this.mesh) {
             this.mesh.position.copy(this.position);
-            console.log('👾 Монстр АКТИВИРОВАН');
+            console.log('👾 Монстр АКТИВИРОВАН (скорость 4.5)');
         }
     }
     
@@ -156,7 +176,7 @@ export class Monster {
         const direction = new THREE.Vector3().subVectors(playerPos, this.position);
         const distance = direction.length();
         
-        // Хитбокс - увеличен радиус захвата для надёжности
+        // Хитбокс - увеличенный радиус захвата
         if (distance < 1.3) {
             console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
             return true;
@@ -164,11 +184,8 @@ export class Monster {
         
         if (distance < 50) {
             direction.normalize();
-            // Скорость увеличивается незначительно при приближении
-            let currentSpeed = this.speed;
-            if (distance < 8) currentSpeed = this.speed * 1.4;
-            else if (distance < 15) currentSpeed = this.speed * 1.2;
-            
+            // Постоянная скорость (быстрее пешехода, медленнее бега)
+            const currentSpeed = this.speed;
             const move = direction.multiplyScalar(currentSpeed * deltaTime);
             this.position.add(move);
             
