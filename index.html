@@ -3,488 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Побег с острова - Тайна подвала</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>">
+    <title>Остров Эпштейна - Побег</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👔</text></svg>">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-
-        body {
-            overflow: hidden;
-            font-family: 'Courier New', monospace;
-        }
-
-        /* Экран загрузки */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { overflow: hidden; font-family: 'Courier New', monospace; }
         #loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(135deg, #0a0a2a 0%, #1a1a3a 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
+            display: flex; justify-content: center; align-items: center; z-index: 200;
             transition: opacity 0.5s;
         }
-
-        .loading-content {
-            text-align: center;
-            color: white;
-        }
-
+        .loading-content { text-align: center; color: white; }
         .loading-spinner {
-            width: 60px;
-            height: 60px;
-            margin: 20px auto;
-            border: 5px solid rgba(255,170,68,0.3);
-            border-top: 5px solid #ffaa44;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 60px; height: 60px; margin: 20px auto;
+            border: 5px solid rgba(255,170,68,0.3); border-top: 5px solid #ffaa44;
+            border-radius: 50%; animation: spin 1s linear infinite;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 24px;
-            margin-top: 20px;
-            color: #ffaa44;
-            font-weight: bold;
-        }
-
-        .loading-subtext {
-            font-size: 14px;
-            margin-top: 10px;
-            color: #aaa;
-        }
-
-        .loading-bar-container {
-            width: 300px;
-            height: 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 10px;
-            margin: 20px auto;
-            overflow: hidden;
-        }
-
-        .loading-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #ffaa44, #ffcc66);
-            border-radius: 10px;
-            transition: width 0.3s;
-        }
-
-        .loading-percent {
-            font-size: 18px;
-            margin-top: 10px;
-            color: #ffaa44;
-        }
-
-        /* Игровой интерфейс */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 24px; margin-top: 20px; color: #ffaa44; font-weight: bold; }
+        .loading-bar-container { width: 300px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 20px auto; overflow: hidden; }
+        .loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffaa44, #ffcc66); border-radius: 10px; transition: width 0.3s; }
         #game-ui {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
+            position: fixed; width: 100%; height: 100%; pointer-events: none; z-index: 10;
         }
-
         #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 4px;
-            height: 4px;
-            background: white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            background: white; border-radius: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.5); pointer-events: none;
         }
-
-        #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255,255,255,0.7);
-        }
-
-        #crosshair::before {
-            top: -8px;
-            left: 1px;
-            width: 2px;
-            height: 8px;
-        }
-
-        #crosshair::after {
-            top: 1px;
-            left: -8px;
-            width: 8px;
-            height: 2px;
-        }
-
         #interaction-prompt {
-            position: absolute;
-            bottom: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border-left: 4px solid #ffaa00;
-            pointer-events: none;
-            animation: pulse 1s infinite;
-            backdrop-filter: blur(5px);
-            font-weight: bold;
+            position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px;
+            border-radius: 8px; border-left: 4px solid #ffaa00;
+            animation: pulse 1s infinite; backdrop-filter: blur(5px);
+            font-weight: bold; pointer-events: none;
         }
-
-        @keyframes pulse {
-            0% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-            50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
-            100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
-        }
-
-        .prompt-content {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .key-icon {
-            font-size: 20px;
-        }
-
+        @keyframes pulse { 0% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.05); } 100% { opacity: 0.7; transform: translateX(-50%) scale(1); } }
         #inventory {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            border-radius: 12px;
-            padding: 10px;
-            backdrop-filter: blur(5px);
-            border: 1px solid #ffaa44;
-            display: none;
-            gap: 10px;
-            flex-direction: row;
+            position: absolute; bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.8); border-radius: 12px; padding: 10px;
+            backdrop-filter: blur(5px); border: 1px solid #ffaa44;
+            display: none; gap: 10px; flex-direction: row;
         }
-
         .inventory-slot {
-            width: 50px;
-            height: 50px;
-            background: rgba(0,0,0,0.7);
-            border: 1px solid #ffaa44;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            position: relative;
+            width: 50px; height: 50px; background: rgba(0,0,0,0.7); border: 1px solid #ffaa44;
+            border-radius: 5px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; position: relative;
         }
-
-        .inventory-slot span:first-child {
-            position: absolute;
-            bottom: 2px;
-            right: 5px;
-            font-size: 10px;
-            color: #aaa;
-        }
-
-        .slot-item {
-            font-size: 28px;
-        }
-
+        .inventory-slot span:first-child { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #aaa; }
+        .slot-item { font-size: 28px; }
         #quest-log {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.8);
-            padding: 12px 20px;
-            border-radius: 8px;
-            backdrop-filter: blur(5px);
-            border-left: 3px solid #ffaa44;
-            max-width: 280px;
-            pointer-events: none;
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.8); padding: 12px 20px; border-radius: 8px;
+            backdrop-filter: blur(5px); border-left: 3px solid #ffaa44;
+            max-width: 280px; pointer-events: none;
         }
-
-        #quest-log h3 {
-            color: #ffaa44;
-            font-size: 14px;
-            margin-bottom: 5px;
-        }
-
-        #quest-text {
-            color: white;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
+        #quest-log h3 { color: #ffaa44; font-size: 14px; margin-bottom: 5px; }
+        #quest-text { color: white; font-size: 12px; line-height: 1.4; }
         #message-area {
-            position: absolute;
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: #ffaa44;
-            padding: 10px 20px;
-            border-radius: 8px;
-            text-align: center;
-            animation: fadeOut 3s forwards;
-            pointer-events: none;
-            z-index: 20;
-            white-space: nowrap;
-            font-weight: bold;
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #ffaa44; padding: 10px 20px;
+            border-radius: 8px; text-align: center; animation: fadeOut 3s forwards;
+            pointer-events: none; white-space: nowrap; font-weight: bold;
         }
-
-        @keyframes fadeOut {
-            0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-            70% { opacity: 1; }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
-        }
-
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
         #status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            color: #ffaa88;
-            padding: 10px 18px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            font-family: monospace;
-            pointer-events: none;
-            z-index: 10;
-            text-align: right;
-            backdrop-filter: blur(4px);
-            border-right: 3px solid #ff5500;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.8); color: #ffaa88; padding: 10px 18px;
+            border-radius: 8px; font-weight: bold; font-size: 14px;
+            text-align: right; backdrop-filter: blur(4px); border-right: 3px solid #ff5500;
         }
-
         #stamina-bar {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            width: 200px;
-            height: 15px;
-            background: rgba(0,0,0,0.6);
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid #ffaa44;
+            position: absolute; bottom: 20px; left: 20px;
+            width: 200px; height: 15px; background: rgba(0,0,0,0.6);
+            border-radius: 10px; overflow: hidden; border: 1px solid #ffaa44;
         }
-
-        #stamina-value {
-            width: 100%;
-            height: 100%;
-            background: #44ff44;
-            transition: width 0.1s;
-        }
-
-        /* Затемнение смерти и победы */
+        #stamina-value { width: 100%; height: 100%; background: #44ff44; transition: width 0.1s; }
         #death-overlay, #win-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            z-index: 300;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 300; pointer-events: none; opacity: 0; transition: opacity 0.5s;
         }
-
-        /* Меню настроек */
-        .settings-content {
-            background: rgba(0,0,0,0.95);
-            padding: 30px;
-            border-radius: 20px;
-            border: 2px solid #ffaa44;
-            min-width: 350px;
+        .game-over-content, .win-content {
+            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 20px;
+            text-align: center; border: 2px solid #ffaa44; min-width: 320px;
             backdrop-filter: blur(10px);
         }
-
-        .settings-content h2 {
-            color: #ffaa44;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 15px 0;
-            color: white;
-        }
-
-        .setting-item label {
-            font-size: 14px;
-        }
-
-        .setting-item input[type="range"] {
-            width: 150px;
-            cursor: pointer;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: 0.3s;
-            border-radius: 24px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: 0.3s;
-            border-radius: 50%;
-        }
-
-        input:checked + .toggle-slider {
-            background-color: #ffaa44;
-        }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(26px);
-        }
-
-        .settings-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .settings-buttons button {
-            background: #ffaa44;
-            color: #1a1a1a;
-            border: none;
-            padding: 8px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .settings-buttons button:hover {
-            transform: scale(1.05);
-            background: #ffcc66;
-        }
-
-        .menu-content, .game-over-content, .win-content {
-            background: rgba(0,0,0,0.95);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            border: 2px solid #ffaa44;
-            min-width: 320px;
-            backdrop-filter: blur(10px);
-        }
-
-        .menu-content h1, .win-content h2 {
-            color: #ffaa44;
-            margin-bottom: 20px;
-            font-size: 28px;
-        }
-
-        .menu-content p, .game-over-content p {
-            color: white;
-            margin-bottom: 30px;
-            line-height: 1.6;
-        }
-
         button {
-            background: #ffaa44;
-            color: #1a1a1a;
-            border: none;
-            padding: 12px 30px;
-            margin: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: monospace;
-            transition: transform 0.2s, background 0.2s;
+            background: #ffaa44; color: #1a1a1a; border: none; padding: 12px 30px;
+            margin: 10px; font-size: 16px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; font-family: monospace; transition: transform 0.2s;
         }
-
-        button:hover {
-            transform: scale(1.05);
-            background: #ffcc66;
+        button:hover { transform: scale(1.05); background: #ffcc66; }
+        #game-over, #win-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center;
+            align-items: center; z-index: 100; backdrop-filter: blur(5px);
         }
-
-        #menu-overlay, #game-over, #win-screen, #settings-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-            backdrop-filter: blur(5px);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #monster-status {
-            color: #ff6666;
-        }
-
-        @media (max-width: 600px) {
-            #quest-log { font-size: 10px; max-width: 200px; }
-            #status { font-size: 11px; padding: 8px 12px; }
-            .menu-content { padding: 20px; min-width: 280px; }
-            .menu-content h1 { font-size: 22px; }
-            .settings-content { min-width: 280px; padding: 20px; }
-            #stamina-bar { width: 120px; }
-        }
+        .hidden { display: none !important; }
+        @media (max-width: 600px) { #quest-log { max-width: 200px; } #stamina-bar { width: 120px; } }
     </style>
 </head>
 <body>
-    <!-- Оверлеи затемнения для смерти и победы -->
     <div id="death-overlay"></div>
     <div id="win-overlay"></div>
-
     <div id="loading-screen">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <div class="loading-text">ЗАГРУЗКА ИГРЫ</div>
+            <div class="loading-text">ЗАГРУЗКА ОСТРОВА ЭПШТЕЙНА</div>
             <div class="loading-bar-container"><div class="loading-bar" id="loading-bar"></div></div>
             <div class="loading-percent" id="loading-percent">0%</div>
             <div class="loading-subtext" id="loading-status">Инициализация...</div>
@@ -495,33 +121,18 @@
         <div id="crosshair"></div>
         <div id="interaction-prompt" class="hidden"><div class="prompt-content"><span class="key-icon">🔑</span><span id="prompt-text">Нажмите E</span></div></div>
         <div id="inventory"></div>
-        <div id="quest-log"><h3>📜 ЗАДАНИЕ</h3><p id="quest-text">Найдите способ выбраться из подвала</p></div>
+        <div id="quest-log"><h3>📜 ЗАДАНИЕ</h3><p id="quest-text">Сбегите с острова Эпштейна</p></div>
         <div id="message-area" class="hidden"><div id="message-text"></div></div>
-        <div id="status">🚪 ДВЕРЬ: <span id="distance-indicator">---</span> м<br>👾 МОНСТР: <span id="monster-status">❌</span></div>
+        <div id="status">🚪 ДВЕРЬ: <span id="distance-indicator">---</span> м<br>👔 ЭПШТЕЙН: <span id="monster-status">❌</span></div>
         <div id="stamina-bar"><div id="stamina-value"></div></div>
     </div>
 
-    <div id="menu-overlay">
-        <div class="menu-content">
-            <h1>🏝️ ПОБЕГ С ОСТРОВА 🏝️</h1>
-            <p>Вы проснулись в тёмном подвале заброшенного дома.<br>Что-то здесь не так... Вам нужно найти ключ и выбраться на поверхность.<br>Но остров скрывает ужасную тайну.</p>
-            <button id="start-game">▶ НАЧАТЬ ИГРУ</button>
-            <button id="settings-btn">⚙️ НАСТРОЙКИ</button>
-            <button id="restart-game">🔄 ПЕРЕЗАПУСТИТЬ</button>
-        </div>
+    <div id="game-over" class="hidden">
+        <div class="game-over-content"><h2>💀 ВАС СХВАТИЛ ЭПШТЕЙН 💀</h2><p>Вы не смогли сбежать с его острова...</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div>
     </div>
-
-    <div id="settings-screen" class="hidden">
-        <div class="settings-content">
-            <h2>⚙️ НАСТРОЙКИ</h2>
-            <div class="setting-item"><label>🎮 Тени</label><label class="toggle-switch"><input type="checkbox" id="shadows-toggle" checked><span class="toggle-slider"></span></label></div>
-            <div class="setting-item"><label>☀️ Яркость</label><input type="range" id="brightness-slider" min="0.2" max="1.0" step="0.01" value="0.55"></div>
-            <div class="settings-buttons"><button id="settings-save">Сохранить</button><button id="settings-cancel">Отмена</button></div>
-        </div>
+    <div id="win-screen" class="hidden">
+        <div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы уплыли с острова Эпштейна!<br>Эпштейн остался позади, сжимая кулаки.</p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div>
     </div>
-
-    <div id="game-over" class="hidden"><div class="game-over-content"><h2>💀 ВЫ ПОГИБЛИ 💀</h2><p>Монстр оказался быстрее...<br>Ваше приключение закончилось трагически.</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div></div>
-    <div id="win-screen" class="hidden"><div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы успешно добрались до лодки и уплыли с острова!<br>Монстр остался позади, рыча в бессильной ярости.<br><strong>Вы выжили!</strong></p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div></div>
 
     <script type="importmap">
         {
@@ -531,6 +142,6 @@
             }
         }
     </script>
-    <script type="module" src="game.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>
