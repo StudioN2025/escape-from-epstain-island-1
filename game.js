@@ -44,6 +44,12 @@ class Game {
         this.originalCameraPos = null;
         this.deathSound = null;
         
+        // Победа
+        this.isWinning = false;
+        this.winTimer = 0;
+        this.winDuration = 3.0;
+        this.winSound = null;
+        
         this.settings = {
             shadows: true,
             brightness: 0.55
@@ -118,6 +124,8 @@ class Game {
         
         this.deathSound = new Audio('assets/sounds/death.mp3');
         this.deathSound.load();
+        this.winSound = new Audio('assets/sounds/win.mp3');
+        this.winSound.load();
         
         this.updateLoadingProgress(100, 'Готово!');
         setTimeout(() => {
@@ -307,7 +315,7 @@ class Game {
                         this.ui.updateQuest('⛽ Найдите канистру с бензином на острове');
                         this.world.spawnCanister(() => this.handleInteraction('fuel'));
                     } else if (this.inventory.hasFuel()) {
-                        this.winGame();
+                        this.startWinSequence();
                     } else {
                         this.ui.showMessage('⛽ Нужно найти бензин! Канистра где-то на острове.', 3000);
                     }
@@ -345,8 +353,40 @@ class Game {
         this.ui.showWinScreen();
         if (document.exitPointerLock) document.exitPointerLock();
         document.getElementById('game-ui')?.classList.add('hidden');
-        const overlay = document.getElementById('death-overlay');
+        const overlay = document.getElementById('win-overlay');
         if (overlay) overlay.style.opacity = '0';
+    }
+    
+    startWinSequence() {
+        if (this.isWinning) return;
+        this.isWinning = true;
+        this.gameActive = false;
+        this.originalCameraPos = this.camera.position.clone();
+        this.winTimer = 0;
+        if (this.winSound) {
+            this.winSound.currentTime = 0;
+            this.winSound.play().catch(e => console.log('Audio play error:', e));
+        }
+        if (document.exitPointerLock) document.exitPointerLock();
+        const overlay = document.getElementById('win-overlay');
+        if (overlay) overlay.style.opacity = '0';
+        // Скрыть UI, чтобы не мешал
+        document.getElementById('game-ui')?.classList.add('hidden');
+    }
+    
+    updateWinSequence(deltaTime) {
+        this.winTimer += deltaTime;
+        const t = Math.min(1.0, this.winTimer / this.winDuration);
+        // Целевая позиция камеры: высоко над островом
+        const targetPos = new THREE.Vector3(0, 20, 30);
+        this.camera.position.lerpVectors(this.originalCameraPos, targetPos, t);
+        this.camera.lookAt(0, 0, 0);
+        const overlay = document.getElementById('win-overlay');
+        if (overlay) overlay.style.opacity = Math.min(1.0, t * 1.5);
+        if (t >= 1.0) {
+            this.isWinning = false;
+            this.winGame();
+        }
     }
     
     startDeathSequence() {
@@ -391,7 +431,7 @@ class Game {
     }
     
     updateMovement(deltaTime) {
-        if (this.isDying) return;
+        if (this.isDying || this.isWinning) return;
         
         let speed = 3.8;
         if (this.keys['ShiftLeft'] && this.stamina > 0 && this.gameActive) {
@@ -416,7 +456,6 @@ class Game {
         move.multiplyScalar(moveDist);
         
         let newPos = this.player.position.clone().add(move);
-        // Применяем коллизии для подвала и острова
         if (this.world && this.world.collidables && this.world.collidables.length > 0) {
             newPos = this.world.resolveCollision(newPos);
         }
@@ -434,7 +473,7 @@ class Game {
             this.camera.position.y = this.player.position.y;
         }
         
-        if (this.gamePhase === 'island' && this.gameActive && !this.isDying) {
+        if (this.gamePhase === 'island' && this.gameActive && !this.isDying && !this.isWinning) {
             const caught = this.monster.update(this.player.position, deltaTime);
             if (caught) {
                 this.startDeathSequence();
@@ -464,8 +503,15 @@ class Game {
         requestAnimationFrame(() => this.animate());
         const delta = Math.min(0.033, 1/60);
         if (this.fbxMixer) this.fbxMixer.update(delta);
-        if (this.isDying) this.updateDeathSequence(delta);
-        else if (this.gameActive) this.updateMovement(delta);
+        
+        if (this.isWinning) {
+            this.updateWinSequence(delta);
+        } else if (this.isDying) {
+            this.updateDeathSequence(delta);
+        } else if (this.gameActive) {
+            this.updateMovement(delta);
+        }
+        
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -482,10 +528,13 @@ class Game {
     }
     
     startGame() {
-        const overlay = document.getElementById('death-overlay');
-        if (overlay) overlay.style.opacity = '0';
+        const deathOverlay = document.getElementById('death-overlay');
+        const winOverlay = document.getElementById('win-overlay');
+        if (deathOverlay) deathOverlay.style.opacity = '0';
+        if (winOverlay) winOverlay.style.opacity = '0';
         this.gameActive = true;
         this.isDying = false;
+        this.isWinning = false;
         this.gamePhase = 'basement';
         this.boatQuestStarted = false;
         this.ui.hideMenu();
