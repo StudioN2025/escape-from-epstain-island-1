@@ -13,7 +13,6 @@ export class Monster {
     }
     
     createMesh() {
-        // Создаём модель Эпштейна (заглушка – красная сфера с пиджаком)
         const group = new THREE.Group();
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ color: 0xcc4444, emissive: 0x331111, roughness: 0.3 });
@@ -21,7 +20,7 @@ export class Monster {
         body.castShadow = true;
         group.add(body);
         
-        // Имитация пиджака
+        // Пиджак
         const jacketMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         const jacket = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.8), jacketMat);
         jacket.position.set(0, -0.2, 0.4);
