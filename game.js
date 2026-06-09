@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { Player } from './src/Player.js';
-import { Monster } from './src/Monster.js';   // класс Monster переименовывать не будем, но внутри поменяем тексты
+import { Monster } from './src/Monster.js';
 import { World } from './src/World.js';
 import { Inventory } from './src/Inventory.js';
 import { StoryManager } from './src/StoryManager.js';
@@ -13,7 +13,7 @@ export class Game {
         this.camera = null;
         this.renderer = null;
         this.player = null;
-        this.epstein = null;        // вместо monster
+        this.epstein = null;
         this.world = null;
         this.inventory = null;
         this.story = null;
@@ -55,7 +55,6 @@ export class Game {
         };
         
         this.loadSettings();
-        // Не вызываем init здесь, ждём start()
     }
     
     loadSettings() {
@@ -79,7 +78,12 @@ export class Game {
     
     updateLoadingProgress(percent, status) {
         this.loadingProgress = percent;
-        // Можно добавить индикатор в DOM, если нужно
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingPercent = document.getElementById('loading-percent');
+        const loadingStatus = document.getElementById('loading-status');
+        if (loadingBar) loadingBar.style.width = percent + '%';
+        if (loadingPercent) loadingPercent.innerText = percent + '%';
+        if (loadingStatus) loadingStatus.innerText = status;
         console.log(`Загрузка: ${percent}% - ${status}`);
     }
     
@@ -93,7 +97,7 @@ export class Game {
         this.updateLoadingProgress(35, 'Загрузка игрока...');
         this.player = new Player(this.camera);
         this.updateLoadingProgress(45, 'Загрузка Эпштейна...');
-        this.epstein = new Monster(this.scene); // но внутри Monster.js заменим название класса на Epstein? Пока оставим как есть, только тексты.
+        this.epstein = new Monster(this.scene);
         this.updateLoadingProgress(55, 'Загрузка инвентаря...');
         this.inventory = new Inventory();
         this.updateLoadingProgress(60, 'Загрузка интерфейса...');
@@ -119,7 +123,7 @@ export class Game {
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) loadingScreen.style.display = 'none';
-            this.startGame();
+            this.start();   // ВАЖНО: исправлено с this.startGame на this.start
         }, 500);
         this.animate();
         this.story.startGame();
@@ -127,7 +131,7 @@ export class Game {
     
     async loadEpsteinFBX() {
         const loader = new FBXLoader();
-        const fbxPath = 'assets/models/epstein_run.fbx'; // модель бегущего Эпштейна
+        const fbxPath = 'assets/models/epstein_run.fbx';
         return new Promise((resolve) => {
             loader.load(fbxPath, (fbx) => {
                 console.log('✅ Модель Эпштейна загружена');
