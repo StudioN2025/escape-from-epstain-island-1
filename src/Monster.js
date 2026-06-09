@@ -144,29 +144,34 @@ export class Monster {
         
         const dx = playerPos.x - this.position.x;
         const dz = playerPos.z - this.position.z;
-        const distanceXZ = Math.sqrt(dx*dx + dz*dz);
+        const distance = Math.hypot(dx, dz);
         
-        if (distanceXZ < 1.4) {
+        if (distance < 1.4) {
             console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
             return true;
         }
         
-        if (distanceXZ < 50) {
-            // Угол к игроку
-            const angle = Math.atan2(dz, dx);
-            this.mesh.rotation.y = angle; // правильный поворот лицом к игроку
+        if (distance < 50) {
+            // Направление движения (единичный вектор)
+            const dirX = dx / distance;
+            const dirZ = dz / distance;
             
-            // Движение к игроку
-            const moveX = Math.cos(angle) * this.speed * deltaTime;
-            const moveZ = Math.sin(angle) * this.speed * deltaTime;
-            this.position.x += moveX;
-            this.position.z += moveZ;
+            // Поворачиваем модель в сторону движения
+            // Угол между осью Z (0,1) и вектором направления
+            const angle = Math.atan2(dirX, dirZ);
+            this.mesh.rotation.y = angle;
             
+            // Движение
+            this.position.x += dirX * this.speed * deltaTime;
+            this.position.z += dirZ * this.speed * deltaTime;
+            
+            // Ограничения острова
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
             this.position.y = 0;
             this.mesh.position.copy(this.position);
             
+            // Анимация пульсации
             const time = Date.now() * 0.012;
             const scale = 1 + Math.sin(time) * 0.05;
             this.mesh.scale.set(scale, scale, scale);
