@@ -576,7 +576,7 @@ export class World {
             const scale = targetSize / Math.max(size.x, size.y, size.z);
             model.scale.setScalar(scale);
             // Поднимаем выше: y = 0.5 вместо -0.5, чтобы дом стоял на земле, но казался выше
-            model.position.set(0, 0.2, 0);
+            model.position.set(0, 2, 0);
             model.castShadow = true;
             model.receiveShadow = true;
             this.scene.add(model);
