@@ -78,12 +78,7 @@ export class Game {
     
     updateLoadingProgress(percent, status) {
         this.loadingProgress = percent;
-        const loadingBar = document.getElementById('loading-bar');
-        const loadingPercent = document.getElementById('loading-percent');
-        const loadingStatus = document.getElementById('loading-status');
-        if (loadingBar) loadingBar.style.width = percent + '%';
-        if (loadingPercent) loadingPercent.innerText = percent + '%';
-        if (loadingStatus) loadingStatus.innerText = status;
+        // Можно добавить индикатор в DOM, если нужно
         console.log(`Загрузка: ${percent}% - ${status}`);
     }
     
@@ -123,10 +118,12 @@ export class Game {
         setTimeout(() => {
             const loadingScreen = document.getElementById('loading-screen');
             if (loadingScreen) loadingScreen.style.display = 'none';
-            this.start();   // ВАЖНО: исправлено с this.startGame на this.start
+            // Показываем игровой UI
+            document.getElementById('game-ui')?.classList.remove('hidden');
+            this.gameActive = true;
+            this.story.startGame();
         }, 500);
         this.animate();
-        this.story.startGame();
     }
     
     async loadEpsteinFBX() {
