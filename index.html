@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Побег с острова Эпштейна 1</title>
+    <title>Побег с острова - Тайна подвала</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>">
     <style>
         * {
@@ -287,8 +287,8 @@
             transition: width 0.1s;
         }
 
-        /* Затемнение смерти */
-        #death-overlay {
+        /* Затемнение смерти и победы */
+        #death-overlay, #win-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -477,7 +477,9 @@
     </style>
 </head>
 <body>
+    <!-- Оверлеи затемнения для смерти и победы -->
     <div id="death-overlay"></div>
+    <div id="win-overlay"></div>
 
     <div id="loading-screen">
         <div class="loading-content">
@@ -502,7 +504,7 @@
     <div id="menu-overlay">
         <div class="menu-content">
             <h1>🏝️ ПОБЕГ С ОСТРОВА 🏝️</h1>
-            <p>Вы проснулись в тёмном подвале заброшенного дома.<br>Что-то здесь не так... Вам нужно найти ключ и выбраться на поверхность.<br>Кажется там кто-то ходит.</p>
+            <p>Вы проснулись в тёмном подвале заброшенного дома.<br>Что-то здесь не так... Вам нужно найти ключ и выбраться на поверхность.<br>Но остров скрывает ужасную тайну.</p>
             <button id="start-game">▶ НАЧАТЬ ИГРУ</button>
             <button id="settings-btn">⚙️ НАСТРОЙКИ</button>
             <button id="restart-game">🔄 ПЕРЕЗАПУСТИТЬ</button>
@@ -518,8 +520,8 @@
         </div>
     </div>
 
-    <div id="game-over" class="hidden"><div class="game-over-content"><h2>💀 ВЫ ПОГИБЛИ 💀</h2><p>Эпштейн оказался быстрее...<br>Ваше приключение закончилось, как и ваша девственность.</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div></div>
-    <div id="win-screen" class="hidden"><div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы успешно добрались до лодки и уплыли с острова!<br>Эпштейн остался позади, рыча в бессильной ярости.<br><strong>Вы выжили!</strong></p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div></div>
+    <div id="game-over" class="hidden"><div class="game-over-content"><h2>💀 ВЫ ПОГИБЛИ 💀</h2><p>Монстр оказался быстрее...<br>Ваше приключение закончилось трагически.</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div></div>
+    <div id="win-screen" class="hidden"><div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы успешно добрались до лодки и уплыли с острова!<br>Монстр остался позади, рыча в бессильной ярости.<br><strong>Вы выжили!</strong></p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div></div>
 
     <script type="importmap">
         {
