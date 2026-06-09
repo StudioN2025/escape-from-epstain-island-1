@@ -38,7 +38,6 @@ class Game {
         this.inventoryOpen = false;
         this.boatQuestStarted = false;
         
-        // Смерть
         this.isDying = false;
         this.deathTimer = 0;
         this.deathDuration = 2.0;
@@ -368,22 +367,16 @@ class Game {
     updateDeathSequence(deltaTime) {
         this.deathTimer += deltaTime;
         const t = Math.min(1.0, this.deathTimer / this.deathDuration);
-        
         const monsterPos = this.monster.position.clone();
-        monsterPos.y += 1.0; // высота лица
-        
-        // Камера приближается к монстру: спереди на расстоянии 1.2 м
+        monsterPos.y += 1.0;
         const targetCamPos = monsterPos.clone();
-        targetCamPos.z += 1.2; // перед мордой
-        targetCamPos.x += 0.3; // небольшой сдвиг для ракурса
+        targetCamPos.z += 1.2;
+        targetCamPos.x += 0.3;
         targetCamPos.y = monsterPos.y + 0.5;
-        
         this.camera.position.lerpVectors(this.originalCameraPos, targetCamPos, t);
         this.camera.lookAt(monsterPos);
-        
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = Math.min(1.0, t * 1.5);
-        
         if (t >= 1.0) {
             this.isDying = false;
             this.gameOver();
@@ -423,7 +416,8 @@ class Game {
         move.multiplyScalar(moveDist);
         
         let newPos = this.player.position.clone().add(move);
-        if (this.gamePhase === 'basement' && this.world && this.world.collidables) {
+        // Применяем коллизии для подвала и острова
+        if (this.world && this.world.collidables && this.world.collidables.length > 0) {
             newPos = this.world.resolveCollision(newPos);
         }
         this.player.position.copy(newPos);
@@ -470,11 +464,8 @@ class Game {
         requestAnimationFrame(() => this.animate());
         const delta = Math.min(0.033, 1/60);
         if (this.fbxMixer) this.fbxMixer.update(delta);
-        if (this.isDying) {
-            this.updateDeathSequence(delta);
-        } else if (this.gameActive) {
-            this.updateMovement(delta);
-        }
+        if (this.isDying) this.updateDeathSequence(delta);
+        else if (this.gameActive) this.updateMovement(delta);
         this.renderer.render(this.scene, this.camera);
     }
     
