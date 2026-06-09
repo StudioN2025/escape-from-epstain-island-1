@@ -162,38 +162,44 @@ export class Monster {
     update(playerPos, deltaTime) {
         if (!this.active) return false;
         
-        // Вычисляем горизонтальное расстояние (без учёта высоты)
         const dx = playerPos.x - this.position.x;
         const dz = playerPos.z - this.position.z;
         const distanceXZ = Math.sqrt(dx*dx + dz*dz);
         
-        // Проверка захвата по горизонтали (игрок на высоте 1.6, монстр на 0)
+        // Проверка захвата по горизонтали
         if (distanceXZ < 1.4) {
             console.log('💀 МОНСТР СХВАТИЛ ИГРОКА!');
             return true;
         }
         
         if (distanceXZ < 50) {
-            // Движение прямо к игроку
-            const angle = Math.atan2(dz, dx);
-            const moveX = Math.cos(angle) * this.speed * deltaTime;
-            const moveZ = Math.sin(angle) * this.speed * deltaTime;
+            // Целевой угол
+            const targetAngle = Math.atan2(dz, dx);
+            
+            // Плавный поворот
+            let currentAngle = this.mesh.rotation.y;
+            let diff = targetAngle - currentAngle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            const newAngle = currentAngle + diff * Math.min(1.0, 6.0 * deltaTime);
+            this.mesh.rotation.y = newAngle;
+            
+            // Движение
+            const moveX = Math.cos(targetAngle) * this.speed * deltaTime;
+            const moveZ = Math.sin(targetAngle) * this.speed * deltaTime;
             this.position.x += moveX;
             this.position.z += moveZ;
             
-            // Границы острова
+            // Границы
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
             this.position.y = 0;
+            this.mesh.position.copy(this.position);
             
-            if (this.mesh) {
-                this.mesh.position.copy(this.position);
-                this.mesh.rotation.y = angle;
-                
-                const time = Date.now() * 0.012;
-                const scale = 1 + Math.sin(time) * 0.05;
-                this.mesh.scale.set(scale, scale, scale);
-            }
+            // Анимация пульсации
+            const time = Date.now() * 0.012;
+            const scale = 1 + Math.sin(time) * 0.05;
+            this.mesh.scale.set(scale, scale, scale);
         }
         
         return false;
