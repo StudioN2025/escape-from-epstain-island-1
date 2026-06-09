@@ -41,7 +41,7 @@ class Game {
         // Смерть
         this.isDying = false;
         this.deathTimer = 0;
-        this.deathDuration = 2.0; // секунды
+        this.deathDuration = 2.0;
         this.originalCameraPos = null;
         this.deathSound = null;
         
@@ -117,7 +117,6 @@ class Game {
         this.updateLoadingProgress(90, 'Загрузка моделей монстра...');
         await this.loadMonsterFBX();
         
-        // Загрузка звука смерти
         this.deathSound = new Audio('assets/sounds/death.mp3');
         this.deathSound.load();
         
@@ -141,9 +140,7 @@ class Game {
         const settingsScreen = document.getElementById('settings-screen');
         const settingsSave = document.getElementById('settings-save');
         const settingsCancel = document.getElementById('settings-cancel');
-        if (settingsBtn) {
-            settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
-        }
+        if (settingsBtn) settingsBtn.onclick = () => settingsScreen.classList.remove('hidden');
         if (settingsSave) {
             settingsSave.onclick = () => {
                 this.settings.shadows = document.getElementById('shadows-toggle').checked;
@@ -349,23 +346,22 @@ class Game {
         this.ui.showWinScreen();
         if (document.exitPointerLock) document.exitPointerLock();
         document.getElementById('game-ui')?.classList.add('hidden');
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) overlay.style.opacity = '0';
     }
     
-    // Запуск эффекта смерти
     startDeathSequence() {
         if (this.isDying) return;
         this.isDying = true;
-        this.gameActive = false; // отключаем управление
+        this.gameActive = false;
         this.originalCameraPos = this.camera.position.clone();
         this.deathTimer = 0;
-        // Затемнение через CSS overlay
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = '0';
         if (this.deathSound) {
             this.deathSound.currentTime = 0;
             this.deathSound.play().catch(e => console.log('Audio play error:', e));
         }
-        // Дополнительно можно выключить указатель мыши
         if (document.exitPointerLock) document.exitPointerLock();
     }
     
@@ -373,18 +369,18 @@ class Game {
         this.deathTimer += deltaTime;
         const t = Math.min(1.0, this.deathTimer / this.deathDuration);
         
-        // Движение камеры к монстру
         const monsterPos = this.monster.position.clone();
-        monsterPos.y += 1.0; // смотреть в лицо
+        monsterPos.y += 1.0; // уровень лица
+        
+        // Камера выше и с другой стороны (сзади-слева от монстра)
         const targetCamPos = monsterPos.clone();
-        targetCamPos.z += 1.5; // небольшое смещение, чтобы видеть монстра
-        targetCamPos.x += 0.5;
-        targetCamPos.y = monsterPos.y;
+        targetCamPos.x -= 2.5;
+        targetCamPos.z -= 2.5;
+        targetCamPos.y = monsterPos.y + 1.2;
         
         this.camera.position.lerpVectors(this.originalCameraPos, targetCamPos, t);
         this.camera.lookAt(monsterPos);
         
-        // Затемнение
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = Math.min(1.0, t * 1.5);
         
@@ -395,16 +391,14 @@ class Game {
     }
     
     gameOver() {
-        // Сброс затемнения
+        // Оставляем экран черным
         const overlay = document.getElementById('death-overlay');
-        if (overlay) overlay.style.opacity = '0';
+        if (overlay) overlay.style.opacity = '1';
         this.ui.showGameOver();
-        if (document.exitPointerLock) document.exitPointerLock();
         document.getElementById('game-ui')?.classList.add('hidden');
     }
     
     updateMovement(deltaTime) {
-        // Если идёт смерть, не обрабатываем движение
         if (this.isDying) return;
         
         let speed = 3.8;
@@ -430,11 +424,9 @@ class Game {
         move.multiplyScalar(moveDist);
         
         let newPos = this.player.position.clone().add(move);
-        
         if (this.gamePhase === 'basement' && this.world && this.world.collidables) {
             newPos = this.world.resolveCollision(newPos);
         }
-        
         this.player.position.copy(newPos);
         
         const bounds = this.gamePhase === 'basement' ? { minX: -8.5, maxX: 8.5, minZ: -8.5, maxZ: 8.5 } : { minX: -47, maxX: 47, minZ: -47, maxZ: 47 };
@@ -479,13 +471,11 @@ class Game {
         requestAnimationFrame(() => this.animate());
         const delta = Math.min(0.033, 1/60);
         if (this.fbxMixer) this.fbxMixer.update(delta);
-        
         if (this.isDying) {
             this.updateDeathSequence(delta);
         } else if (this.gameActive) {
             this.updateMovement(delta);
         }
-        
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -502,6 +492,9 @@ class Game {
     }
     
     startGame() {
+        // Сброс затемнения
+        const overlay = document.getElementById('death-overlay');
+        if (overlay) overlay.style.opacity = '0';
         this.gameActive = true;
         this.isDying = false;
         this.gamePhase = 'basement';
