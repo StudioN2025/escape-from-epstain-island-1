@@ -654,7 +654,7 @@ export class World {
         }
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const baseScale = 3.2 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const baseScale = 4.0 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             positions.forEach(p => {
                 const tree = model.clone();
                 const s = baseScale * p.scale;
@@ -762,7 +762,7 @@ export class World {
     addBoatFromCache() {
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 1.8 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 2.5 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             model.scale.setScalar(scale);
             model.position.set(42, -0.15, 38);
             model.castShadow = this.settings.shadows;
