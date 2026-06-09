@@ -236,7 +236,6 @@ export class World {
             });
         });
         
-        // Восстанавливаем дверь, бочки и факелы
         this.addDoorFromCache();
         this.addBarrelsFromCache();
         this.addTorchesFromCache();
@@ -268,7 +267,6 @@ export class World {
             addDoor(this.cachedModels.door.clone());
         } else {
             this.addDefaultDoor();
-            // Если модель загрузится позже, заменим заглушку
             const check = setInterval(() => {
                 if (this.modelsLoaded.door && this.cachedModels.door) {
                     clearInterval(check);
@@ -333,7 +331,6 @@ export class World {
                 this.basementObjects.push(barrel);
                 this.collidables.push({ type: 'cylinder', x: p.x, z: p.z, radius: 0.5 });
             });
-            // Периодическая замена на GLB
             const check = setInterval(() => {
                 if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
                     clearInterval(check);
@@ -571,33 +568,56 @@ export class World {
         const addHouseModel = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
-            // Увеличиваем дом: целевой размер 8.0 вместо 5.0
-            const targetSize = 10.0;
+            const targetSize = 10.0;   // размер
             const scale = targetSize / Math.max(size.x, size.y, size.z);
             model.scale.setScalar(scale);
-            // Поднимаем выше: y = 0.5 вместо -0.5, чтобы дом стоял на земле, но казался выше
-            model.position.set(0, 2, 0);
+            model.position.set(0, 2.0, 0); // высота
             model.castShadow = true;
             model.receiveShadow = true;
             this.scene.add(model);
             this.objects.push(model);
-            console.log('🏠 Увеличенный дом добавлен');
+            
+            // Хитбокс для дома
+            const finalBox = new THREE.Box3().setFromObject(model);
+            const min = finalBox.min;
+            const max = finalBox.max;
+            const center = finalBox.getCenter(new THREE.Vector3());
+            const halfSize = new THREE.Vector3(
+                (max.x - min.x) / 2,
+                (max.y - min.y) / 2,
+                (max.z - min.z) / 2
+            );
+            this.collidables.push({
+                type: 'box',
+                x: center.x,
+                y: center.y,
+                z: center.z,
+                halfSize: halfSize
+            });
+            console.log('🏠 Дом добавлен с хитбоксом');
         };
         
         if (this.modelsLoaded.house && this.cachedModels.house) {
             addHouseModel(this.cachedModels.house.clone());
         } else {
-            console.warn('⚠️ Модель дома ещё не загружена, использую простую коробку');
+            console.warn('⚠️ Модель дома ещё не загружена, использую простую коробку с хитбоксом');
             const fallback = new THREE.Mesh(new THREE.BoxGeometry(6,5,6), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
-            fallback.position.set(0, 2, 0);
+            fallback.position.set(0, 0.5, 0);
             fallback.castShadow = true;
             this.scene.add(fallback);
             this.objects.push(fallback);
-            // Проверка на загрузку GLB
+            this.collidables.push({
+                type: 'box',
+                x: 0,
+                y: 0.5 + 2.5,
+                z: 0,
+                halfSize: new THREE.Vector3(3, 2.5, 3)
+            });
             const check = setInterval(() => {
                 if (this.modelsLoaded.house && this.cachedModels.house) {
                     clearInterval(check);
                     this.scene.remove(fallback);
+                    this.collidables = this.collidables.filter(c => !(c.x === 0 && c.z === 0 && c.halfSize.x === 3));
                     addHouseModel(this.cachedModels.house.clone());
                 }
             }, 100);
@@ -695,7 +715,6 @@ export class World {
             fireLight.position.set(0,0.4,0);
             this.scene.add(fireLight);
             this.objects.push(fireLight);
-            let t=0;
             const animate = () => {
                 requestAnimationFrame(animate);
                 if(fireLight.parent) fireLight.intensity = 0.35 + Math.sin(Date.now()*0.01)*0.2;
