@@ -236,6 +236,7 @@ export class World {
             });
         });
         
+        // Восстанавливаем дверь, бочки и факелы
         this.addDoorFromCache();
         this.addBarrelsFromCache();
         this.addTorchesFromCache();
@@ -261,9 +262,21 @@ export class World {
             this.exitDoor = model;
             this.scene.add(model);
             this.basementObjects.push(model);
+            console.log('🚪 Дверь загружена');
         };
-        if (this.modelsLoaded.door && this.cachedModels.door) addDoor(this.cachedModels.door.clone());
-        else this.addDefaultDoor();
+        if (this.modelsLoaded.door && this.cachedModels.door) {
+            addDoor(this.cachedModels.door.clone());
+        } else {
+            this.addDefaultDoor();
+            // Если модель загрузится позже, заменим заглушку
+            const check = setInterval(() => {
+                if (this.modelsLoaded.door && this.cachedModels.door) {
+                    clearInterval(check);
+                    if (this.exitDoor && this.exitDoor.parent) this.scene.remove(this.exitDoor);
+                    addDoor(this.cachedModels.door.clone());
+                }
+            }, 100);
+        }
     }
     
     addDefaultDoor() {
@@ -291,7 +304,8 @@ export class World {
         ];
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 0.9 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 0.9 / maxDim;
             positions.forEach(p => {
                 const b = model.clone();
                 b.scale.setScalar(scale);
@@ -303,20 +317,30 @@ export class World {
                 this.basementObjects.push(b);
                 this.collidables.push({ type: 'cylinder', x: p.x, z: p.z, radius: 0.45 });
             });
+            console.log(`🛢️ Добавлено ${positions.length} бочек`);
         };
-        if (this.modelsLoaded.barrel && this.cachedModels.barrel) add(this.cachedModels.barrel.clone());
-        else {
+        if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+            add(this.cachedModels.barrel.clone());
+        } else {
             const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6a4a3a });
-            const simplePos = [[-4,0,3],[4,0,3],[-4,0,-2],[4,0,-2],[0,0,-4],[0,0,5],[-2,0,-5],[2,0,-5]];
-            simplePos.forEach(pos => {
+            positions.forEach(p => {
                 const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.55,0.8,8), barrelMat);
-                barrel.position.set(pos[0], -0.1, pos[2]);
+                barrel.position.set(p.x, -0.1, p.z);
+                barrel.rotation.y = p.rot;
                 barrel.castShadow = this.settings.shadows;
                 barrel.isBarrelStandard = true;
                 this.scene.add(barrel);
                 this.basementObjects.push(barrel);
-                this.collidables.push({ type: 'cylinder', x: pos[0], z: pos[2], radius: 0.5 });
+                this.collidables.push({ type: 'cylinder', x: p.x, z: p.z, radius: 0.5 });
             });
+            // Периодическая замена на GLB
+            const check = setInterval(() => {
+                if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
+                    clearInterval(check);
+                    this.basementObjects.forEach(obj => { if(obj.isBarrelStandard) this.scene.remove(obj); });
+                    add(this.cachedModels.barrel.clone());
+                }
+            }, 100);
         }
     }
     
@@ -324,7 +348,8 @@ export class World {
         const positions = [[-8.7,1.5,-6],[8.7,1.5,-6],[-8.7,1.5,6],[8.7,1.5,6]];
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 0.6 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 0.6 / maxDim;
             positions.forEach(pos => {
                 const torch = model.clone();
                 torch.scale.setScalar(scale);
@@ -337,16 +362,17 @@ export class World {
                 light.position.set(pos[0], pos[1]+0.2, pos[2]);
                 this.scene.add(light);
                 this.basementObjects.push(light);
-                let t=0;
                 const animate = () => {
                     requestAnimationFrame(animate);
                     if(light.parent) light.intensity = 0.2 + Math.sin(Date.now()*0.008)*0.1;
                 };
                 animate();
             });
+            console.log(`🕯️ Факелы добавлены`);
         };
-        if (this.modelsLoaded.torch && this.cachedModels.torch) add(this.cachedModels.torch.clone());
-        else {
+        if (this.modelsLoaded.torch && this.cachedModels.torch) {
+            add(this.cachedModels.torch.clone());
+        } else {
             const torchMat = new THREE.MeshStandardMaterial({ color: 0xaa6633 });
             positions.forEach(pos => {
                 const torch = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.2,0.8,6), torchMat);
@@ -363,13 +389,21 @@ export class World {
                 this.scene.add(light);
                 this.basementObjects.push(light);
             });
+            const check = setInterval(() => {
+                if (this.modelsLoaded.torch && this.cachedModels.torch) {
+                    clearInterval(check);
+                    this.basementObjects.forEach(obj => { if(obj.isTorchStandard) this.scene.remove(obj); });
+                    add(this.cachedModels.torch.clone());
+                }
+            }, 100);
         }
     }
     
     createInteractiveObjects(callback) {
         const addKey = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 0.25 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 0.25 / maxDim;
             model.scale.setScalar(scale);
             model.position.set(-3, 0, 4);
             const minY = new THREE.Box3().setFromObject(model).min.y;
@@ -383,9 +417,21 @@ export class World {
             glow.position.set(-3, 0.25, 4);
             this.scene.add(glow);
             this.basementObjects.push(glow);
+            console.log('🔑 Ключ добавлен');
         };
-        if (this.modelsLoaded.key && this.cachedModels.key) addKey(this.cachedModels.key.clone());
-        else this.createDefaultKey(callback);
+        if (this.modelsLoaded.key && this.cachedModels.key) {
+            addKey(this.cachedModels.key.clone());
+        } else {
+            this.createDefaultKey(callback);
+            const check = setInterval(() => {
+                if (this.modelsLoaded.key && this.cachedModels.key) {
+                    clearInterval(check);
+                    const old = this.basementObjects.find(obj => obj.userData?.isDefaultKey);
+                    if (old) this.scene.remove(old);
+                    addKey(this.cachedModels.key.clone());
+                }
+            }, 100);
+        }
     }
     
     createDefaultKey(callback) {
@@ -403,7 +449,7 @@ export class World {
         tooth2.position.set(0.45,0.05,0);
         group.add(tooth1, tooth2);
         group.position.set(-3,0.1,4);
-        group.userData = { onInteract: () => { callback('key'); this.scene.remove(group); } };
+        group.userData = { isDefaultKey: true, onInteract: () => { callback('key'); this.scene.remove(group); } };
         this.scene.add(group);
         this.basementObjects.push(group);
         this.interactiveObjects.push(group);
@@ -420,7 +466,6 @@ export class World {
         glow.position.copy(this.exitDoor.position);
         this.scene.add(glow);
         this.basementObjects.push(glow);
-        let t=0;
         const animate = () => {
             requestAnimationFrame(animate);
             if(glow.parent) glow.intensity = 0.15 + Math.sin(Date.now()*0.004)*0.1;
@@ -523,26 +568,39 @@ export class World {
     }
     
     addHouse() {
-        if (this.modelsLoaded.house && this.cachedModels.house) {
-            const house = this.cachedModels.house.clone();
-            const box = new THREE.Box3().setFromObject(house);
+        const addHouseModel = (model) => {
+            const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
-            const targetSize = 5.0;
+            // Увеличиваем дом: целевой размер 8.0 вместо 5.0
+            const targetSize = 8.0;
             const scale = targetSize / Math.max(size.x, size.y, size.z);
-            house.scale.setScalar(scale);
-            house.position.set(0, -0.5, 0);
-            house.castShadow = true;
-            house.receiveShadow = true;
-            this.scene.add(house);
-            this.objects.push(house);
-            console.log('🏠 Дом добавлен');
+            model.scale.setScalar(scale);
+            // Поднимаем выше: y = 0.5 вместо -0.5, чтобы дом стоял на земле, но казался выше
+            model.position.set(0, 0.2, 0);
+            model.castShadow = true;
+            model.receiveShadow = true;
+            this.scene.add(model);
+            this.objects.push(model);
+            console.log('🏠 Увеличенный дом добавлен');
+        };
+        
+        if (this.modelsLoaded.house && this.cachedModels.house) {
+            addHouseModel(this.cachedModels.house.clone());
         } else {
             console.warn('⚠️ Модель дома ещё не загружена, использую простую коробку');
-            const fallback = new THREE.Mesh(new THREE.BoxGeometry(4,3.5,4), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
-            fallback.position.set(0, 0, 0);
+            const fallback = new THREE.Mesh(new THREE.BoxGeometry(6,5,6), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
+            fallback.position.set(0, 0.5, 0);
             fallback.castShadow = true;
             this.scene.add(fallback);
             this.objects.push(fallback);
+            // Проверка на загрузку GLB
+            const check = setInterval(() => {
+                if (this.modelsLoaded.house && this.cachedModels.house) {
+                    clearInterval(check);
+                    this.scene.remove(fallback);
+                    addHouseModel(this.cachedModels.house.clone());
+                }
+            }, 100);
         }
     }
     
@@ -754,7 +812,8 @@ export class World {
     spawnCanister(callback) {
         const spawn = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 0.6 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 0.6 / maxDim;
             model.scale.setScalar(scale);
             let x,z;
             do {
