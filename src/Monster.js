@@ -20,14 +20,12 @@ export class Monster {
         body.castShadow = true;
         group.add(body);
         
-        // Пиджак
         const jacketMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
         const jacket = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.5, 0.8), jacketMat);
         jacket.position.set(0, -0.2, 0.4);
         jacket.castShadow = true;
         group.add(jacket);
         
-        // Глаза
         const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
         const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 24), eyeMat);
         const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.15, 24, 24), eyeMat);
