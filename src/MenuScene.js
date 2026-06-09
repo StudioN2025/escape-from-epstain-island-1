@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -48,8 +47,6 @@ export class MenuScene {
         const sunLight = new THREE.DirectionalLight(0xffdd99, 1.0);
         sunLight.position.set(10, 20, 5);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
         this.scene.add(sunLight);
         const fillLight = new THREE.PointLight(0x88aaff, 0.3);
         fillLight.position.set(0, 5, 0);
@@ -93,7 +90,6 @@ export class MenuScene {
         const house = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3, 3.5), houseMat);
         house.position.set(0, 0.2, 0);
         house.castShadow = true;
-        house.receiveShadow = true;
         this.scene.add(house);
         const roofMat = new THREE.MeshStandardMaterial({ color: 0xcc6644 });
         const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 1.3, 4), roofMat);
@@ -109,9 +105,7 @@ export class MenuScene {
             fbx.position.set(1.5, 0, 1.5);
             fbx.rotation.y = -Math.PI / 4;
             fbx.castShadow = true;
-            fbx.receiveShadow = true;
             this.scene.add(fbx);
-            
             if (fbx.animations && fbx.animations.length > 0) {
                 this.mixer = new THREE.AnimationMixer(fbx);
                 const action = this.mixer.clipAction(fbx.animations[0]);
@@ -120,28 +114,23 @@ export class MenuScene {
             }
         }, undefined, (error) => {
             console.warn('⚠️ Модель flair.fbx не загружена, создаю заглушку', error);
-            if (this.scene) {
-                const geometry = new THREE.SphereGeometry(0.7, 32, 32);
-                const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
-                const dummy = new THREE.Mesh(geometry, material);
-                dummy.position.set(1.5, 0.7, 1.5);
-                dummy.castShadow = true;
-                this.scene.add(dummy);
-            }
+            const geometry = new THREE.SphereGeometry(0.7, 32, 32);
+            const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
+            const dummy = new THREE.Mesh(geometry, material);
+            dummy.position.set(1.5, 0.7, 1.5);
+            dummy.castShadow = true;
+            this.scene.add(dummy);
         });
         
-        // Анимация (если нет анимации в FBX)
         this.animateEpstein = () => {
-            if (this.mixer) {
-                this.mixer.update(this.clock.getDelta());
-            } else if (this.epsteinModel) {
+            if (this.mixer) this.mixer.update(this.clock.getDelta());
+            else if (this.epsteinModel) {
                 const time = Date.now() * 0.003;
                 this.epsteinModel.rotation.y = Math.sin(time) * 0.3;
                 this.epsteinModel.position.y = 0 + Math.sin(time * 2) * 0.05;
             }
         };
         
-        // Музыка – пока не играем, только создаём объект
         this.audio = new Audio('assets/sounds/menu.mp3');
         this.audio.loop = true;
         this.audio.volume = 0.6;
@@ -170,10 +159,7 @@ export class MenuScene {
         this.startButton.onmouseenter = () => this.startButton.style.transform = 'translateX(-50%) scale(1.05)';
         this.startButton.onmouseleave = () => this.startButton.style.transform = 'translateX(-50%) scale(1)';
         this.startButton.onclick = () => {
-            // Запускаем музыку при клике (разрешение пользователя)
-            if (this.audio) {
-                this.audio.play().catch(e => console.log('Audio play error:', e));
-            }
+            if (this.audio) this.audio.play().catch(e => console.log('Audio play error:', e));
             this.dispose();
             if (this.onStart) this.onStart();
         };
