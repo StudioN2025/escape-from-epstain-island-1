@@ -1,22 +1,21 @@
+// src/World.js
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class World {
-    constructor(scene, settings) {
+    constructor(scene, settings, assetManager) {
         if (!scene) {
             console.error('World: scene не может быть null');
             return;
         }
         this.scene = scene;
         this.settings = settings || { shadows: true, brightness: 0.55 };
+        this.assetManager = assetManager;
         this.interactiveObjects = [];
         this.objects = [];
         this.exitDoor = null;
         this.waterPlane = null;
         this.boundaryWalls = [];
         this.basementObjects = [];
-        this.gltfLoader = new GLTFLoader();
-        this.treeModel = null;
         this.treeInstances = [];
         this.loadDistance = 40;
         this.unloadDistance = 50;
@@ -26,50 +25,14 @@ export class World {
         this.ambientLight = null;
         this.collidables = [];
         
+        // Текстуры из AssetManager
         this.textures = {
-            stuccoWall: null,
-            stuccoCeiling: null,
-            sand: null,
-            grass: null,
-            laminate: null
+            stuccoWall: assetManager.getTexture('stuccoWall'),
+            stuccoCeiling: assetManager.getTexture('stuccoCeiling'),
+            sand: assetManager.getTexture('sand'),
+            grass: assetManager.getTexture('grass'),
+            laminate: assetManager.getTexture('laminate')
         };
-        
-        this.cachedModels = {
-            torch: null,
-            key: null,
-            palm: null,
-            campfire: null,
-            boat: null,
-            barrel: null,
-            door: null,
-            canister: null,
-            house: null
-        };
-        this.modelsLoading = {
-            torch: false,
-            key: false,
-            palm: false,
-            campfire: false,
-            boat: false,
-            barrel: false,
-            door: false,
-            canister: false,
-            house: false
-        };
-        this.modelsLoaded = {
-            torch: false,
-            key: false,
-            palm: false,
-            campfire: false,
-            boat: false,
-            barrel: false,
-            door: false,
-            canister: false,
-            house: false
-        };
-        
-        this.preloadAllModels();
-        this.loadTextures();
     }
     
     resolveCollision(position) {
@@ -102,83 +65,6 @@ export class World {
             }
         }
         return newPos;
-    }
-    
-    loadTextures() {
-        const loader = new THREE.TextureLoader();
-        this.textures.stuccoWall = loader.load('assets/textures/stucco-5.jpg');
-        this.textures.stuccoWall.wrapS = THREE.RepeatWrapping;
-        this.textures.stuccoWall.wrapT = THREE.RepeatWrapping;
-        this.textures.stuccoWall.repeat.set(4, 3);
-        this.textures.stuccoCeiling = loader.load('assets/textures/stucco-9.jpg');
-        this.textures.stuccoCeiling.wrapS = THREE.RepeatWrapping;
-        this.textures.stuccoCeiling.wrapT = THREE.RepeatWrapping;
-        this.textures.stuccoCeiling.repeat.set(3, 3);
-        this.textures.sand = loader.load('assets/textures/sand-1.jpg');
-        this.textures.sand.wrapS = THREE.RepeatWrapping;
-        this.textures.sand.wrapT = THREE.RepeatWrapping;
-        this.textures.sand.repeat.set(6, 6);
-        this.textures.grass = loader.load('assets/textures/grass-2.jpg');
-        this.textures.grass.wrapS = THREE.RepeatWrapping;
-        this.textures.grass.wrapT = THREE.RepeatWrapping;
-        this.textures.grass.repeat.set(8, 8);
-        this.textures.laminate = loader.load('assets/textures/laminate-2.jpg');
-        this.textures.laminate.wrapS = THREE.RepeatWrapping;
-        this.textures.laminate.wrapT = THREE.RepeatWrapping;
-        this.textures.laminate.repeat.set(4, 4);
-        console.log('🎨 Текстуры загружены');
-    }
-    
-    preloadAllModels() {
-        console.log('🔄 Предзагрузка моделей...');
-        this.preloadModel('torch', 'assets/models/old_torch_with_wall_mounting.glb');
-        this.preloadModel('key', 'assets/models/key.glb');
-        this.preloadModel('palm', 'assets/models/date_palm.glb');
-        this.preloadModel('campfire', 'assets/models/campfire.glb');
-        this.preloadModel('boat', 'assets/models/wooden_boat.glb');
-        this.preloadModel('barrel', 'assets/models/old_barrel_free_download.glb');
-        this.preloadModel('door', 'assets/models/medieval_door.glb');
-        this.preloadModel('canister', 'assets/models/canister.glb');
-        this.preloadModel('house', 'assets/models/house.glb');
-    }
-    
-    preloadModel(name, path) {
-        if (this.modelsLoading[name]) return;
-        this.modelsLoading[name] = true;
-        this.gltfLoader.load(path, (gltf) => {
-            console.log(`✅ Модель ${name} загружена`);
-            this.cachedModels[name] = gltf.scene;
-            this.modelsLoaded[name] = true;
-            this.modelsLoading[name] = false;
-        }, (xhr) => {
-            if (xhr.total) {
-                const pct = Math.floor(xhr.loaded / xhr.total * 100);
-                if (pct % 50 === 0) console.log(`📦 ${name}: ${pct}%`);
-            }
-        }, (err) => {
-            console.warn(`⚠️ Ошибка загрузки ${name}:`, err);
-            this.modelsLoading[name] = false;
-        });
-    }
-    
-    updatePlayerPosition(pos) {
-        this.playerPosition.copy(pos);
-        const now = Date.now();
-        if (now - this.lastUpdateTime > 100) {
-            this.lastUpdateTime = now;
-            this.updateVisibility();
-        }
-    }
-    
-    updateVisibility() {
-        this.treeInstances.forEach(t => {
-            t.visible = this.playerPosition.distanceTo(t.position) < this.loadDistance;
-        });
-        this.objects.forEach(obj => {
-            if (obj.userData?.isBoat) {
-                obj.visible = this.playerPosition.distanceTo(obj.position) < this.loadDistance + 10;
-            }
-        });
     }
     
     async createBasement() {
@@ -256,31 +142,22 @@ export class World {
     
     addDoorFromCache() {
         if (!this.scene) return;
-        const addDoor = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const doorModel = this.assetManager.getModel('door');
+        if (doorModel) {
+            const box = new THREE.Box3().setFromObject(doorModel);
             const size = box.getSize(new THREE.Vector3());
             const scale = 2.2 / Math.max(size.x, size.y, size.z);
-            model.scale.setScalar(scale);
-            model.position.set(8, 0.1, -8.85);
-            model.castShadow = this.settings.shadows;
-            model.receiveShadow = this.settings.shadows;
-            model.traverse(c => { if(c.isMesh) { c.castShadow = this.settings.shadows; c.receiveShadow = this.settings.shadows; } });
-            this.exitDoor = model;
-            this.scene.add(model);
-            this.basementObjects.push(model);
+            doorModel.scale.setScalar(scale);
+            doorModel.position.set(8, 0.1, -8.85);
+            doorModel.castShadow = this.settings.shadows;
+            doorModel.receiveShadow = this.settings.shadows;
+            doorModel.traverse(c => { if(c.isMesh) { c.castShadow = this.settings.shadows; c.receiveShadow = this.settings.shadows; } });
+            this.exitDoor = doorModel;
+            this.scene.add(doorModel);
+            this.basementObjects.push(doorModel);
             console.log('🚪 Дверь загружена');
-        };
-        if (this.modelsLoaded.door && this.cachedModels.door) {
-            addDoor(this.cachedModels.door.clone());
         } else {
             this.addDefaultDoor();
-            const check = setInterval(() => {
-                if (this.modelsLoaded.door && this.cachedModels.door) {
-                    clearInterval(check);
-                    if (this.exitDoor && this.exitDoor.parent) this.scene.remove(this.exitDoor);
-                    addDoor(this.cachedModels.door.clone());
-                }
-            }, 100);
         }
     }
     
@@ -309,12 +186,13 @@ export class World {
             {x:-4,z:3,rot:0},{x:4,z:3,rot:0},{x:-4,z:-2,rot:0.5},{x:4,z:-2,rot:-0.3},
             {x:0,z:-4,rot:0.2},{x:0,z:5,rot:-0.2},{x:-2,z:-5,rot:0.4},{x:2,z:-5,rot:-0.4}
         ];
-        const add = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const barrelModel = this.assetManager.getModel('barrel');
+        if (barrelModel) {
+            const box = new THREE.Box3().setFromObject(barrelModel);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             const scale = 0.9 / maxDim;
             positions.forEach(p => {
-                const b = model.clone();
+                const b = barrelModel.clone();
                 b.scale.setScalar(scale);
                 b.position.set(p.x, -0.2, p.z);
                 b.rotation.y = p.rot;
@@ -325,9 +203,6 @@ export class World {
                 this.collidables.push({ type: 'cylinder', x: p.x, z: p.z, radius: 0.45 });
             });
             console.log(`🛢️ Добавлено ${positions.length} бочек`);
-        };
-        if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
-            add(this.cachedModels.barrel.clone());
         } else {
             const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6a4a3a });
             positions.forEach(p => {
@@ -340,25 +215,19 @@ export class World {
                 this.basementObjects.push(barrel);
                 this.collidables.push({ type: 'cylinder', x: p.x, z: p.z, radius: 0.5 });
             });
-            const check = setInterval(() => {
-                if (this.modelsLoaded.barrel && this.cachedModels.barrel) {
-                    clearInterval(check);
-                    this.basementObjects.forEach(obj => { if(obj.isBarrelStandard) this.scene.remove(obj); });
-                    add(this.cachedModels.barrel.clone());
-                }
-            }, 100);
         }
     }
     
     addTorchesFromCache() {
         if (!this.scene) return;
         const positions = [[-8.7,1.5,-6],[8.7,1.5,-6],[-8.7,1.5,6],[8.7,1.5,6]];
-        const add = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const torchModel = this.assetManager.getModel('torch');
+        if (torchModel) {
+            const box = new THREE.Box3().setFromObject(torchModel);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             const scale = 0.6 / maxDim;
             positions.forEach(pos => {
-                const torch = model.clone();
+                const torch = torchModel.clone();
                 torch.scale.setScalar(scale);
                 torch.position.set(pos[0], pos[1], pos[2]);
                 torch.castShadow = this.settings.shadows;
@@ -376,9 +245,6 @@ export class World {
                 animate();
             });
             console.log(`🕯️ Факелы добавлены`);
-        };
-        if (this.modelsLoaded.torch && this.cachedModels.torch) {
-            add(this.cachedModels.torch.clone());
         } else {
             const torchMat = new THREE.MeshStandardMaterial({ color: 0xaa6633 });
             positions.forEach(pos => {
@@ -396,56 +262,38 @@ export class World {
                 this.scene.add(light);
                 this.basementObjects.push(light);
             });
-            const check = setInterval(() => {
-                if (this.modelsLoaded.torch && this.cachedModels.torch) {
-                    clearInterval(check);
-                    this.basementObjects.forEach(obj => { if(obj.isTorchStandard) this.scene.remove(obj); });
-                    add(this.cachedModels.torch.clone());
-                }
-            }, 100);
         }
     }
     
     createInteractiveObjects(interactCallback) {
         if (!this.scene) return;
-        const addKey = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const keyModel = this.assetManager.getModel('key');
+        if (keyModel) {
+            const box = new THREE.Box3().setFromObject(keyModel);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             const scale = 0.45 / maxDim;
-            model.scale.setScalar(scale);
-            model.position.set(-3, 0, 4);
-            const minY = new THREE.Box3().setFromObject(model).min.y;
-            model.position.y += -minY + 0.1;
-            model.castShadow = this.settings.shadows;
-            model.userData = { 
+            keyModel.scale.setScalar(scale);
+            keyModel.position.set(-3, 0, 4);
+            const minY = new THREE.Box3().setFromObject(keyModel).min.y;
+            keyModel.position.y += -minY + 0.1;
+            keyModel.castShadow = this.settings.shadows;
+            keyModel.userData = { 
                 onInteract: () => { 
                     console.log('🔑 ВЗАИМОДЕЙСТВИЕ С КЛЮЧОМ (GLB)');
                     interactCallback('key'); 
-                    this.scene.remove(model); 
+                    this.scene.remove(keyModel); 
                 } 
             };
-            this.scene.add(model);
-            this.basementObjects.push(model);
-            this.interactiveObjects.push(model);
+            this.scene.add(keyModel);
+            this.basementObjects.push(keyModel);
+            this.interactiveObjects.push(keyModel);
             const glow = new THREE.PointLight(0xffaa44, 0.3, 3);
             glow.position.set(-3, 0.3, 4);
             this.scene.add(glow);
             this.basementObjects.push(glow);
             console.log('🔑 Ключ (GLB) добавлен в interactiveObjects');
-        };
-        
-        if (this.modelsLoaded.key && this.cachedModels.key) {
-            addKey(this.cachedModels.key.clone());
         } else {
             this.createDefaultKey(interactCallback);
-            const check = setInterval(() => {
-                if (this.modelsLoaded.key && this.cachedModels.key) {
-                    clearInterval(check);
-                    const old = this.basementObjects.find(obj => obj.userData?.isDefaultKey);
-                    if (old) this.scene.remove(old);
-                    addKey(this.cachedModels.key.clone());
-                }
-            }, 100);
         }
     }
     
@@ -595,18 +443,19 @@ export class World {
     
     addHouse() {
         if (!this.scene) return;
-        const addHouseModel = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const houseModel = this.assetManager.getModel('house');
+        if (houseModel) {
+            const box = new THREE.Box3().setFromObject(houseModel);
             const size = box.getSize(new THREE.Vector3());
             const targetSize = 10.0;
             const scale = targetSize / Math.max(size.x, size.y, size.z);
-            model.scale.setScalar(scale);
-            model.position.set(0, 2.0, 0);
-            model.castShadow = true;
-            model.receiveShadow = true;
-            this.scene.add(model);
-            this.objects.push(model);
-            const finalBox = new THREE.Box3().setFromObject(model);
+            houseModel.scale.setScalar(scale);
+            houseModel.position.set(0, 2.0, 0);
+            houseModel.castShadow = true;
+            houseModel.receiveShadow = true;
+            this.scene.add(houseModel);
+            this.objects.push(houseModel);
+            const finalBox = new THREE.Box3().setFromObject(houseModel);
             const min = finalBox.min;
             const max = finalBox.max;
             const center = finalBox.getCenter(new THREE.Vector3());
@@ -623,10 +472,6 @@ export class World {
                 halfSize: halfSize
             });
             console.log('🏠 Дом добавлен с хитбоксом');
-        };
-        
-        if (this.modelsLoaded.house && this.cachedModels.house) {
-            addHouseModel(this.cachedModels.house.clone());
         } else {
             console.warn('⚠️ Модель дома ещё не загружена, использую простую коробку с хитбоксом');
             const fallback = new THREE.Mesh(new THREE.BoxGeometry(6,5,6), new THREE.MeshStandardMaterial({ color: 0xaa8866 }));
@@ -641,14 +486,6 @@ export class World {
                 z: 0,
                 halfSize: new THREE.Vector3(3, 2.5, 3)
             });
-            const check = setInterval(() => {
-                if (this.modelsLoaded.house && this.cachedModels.house) {
-                    clearInterval(check);
-                    this.scene.remove(fallback);
-                    this.collidables = this.collidables.filter(c => !(c.x === 0 && c.z === 0 && c.halfSize.x === 3));
-                    addHouseModel(this.cachedModels.house.clone());
-                }
-            }, 100);
         }
     }
     
@@ -682,11 +519,12 @@ export class World {
             const r = 10+Math.random()*38;
             positions.push({ x: Math.cos(angle)*r, z: Math.sin(angle)*r, scale: 0.7+Math.random()*0.6 });
         }
-        const add = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const palmModel = this.assetManager.getModel('palm');
+        if (palmModel) {
+            const box = new THREE.Box3().setFromObject(palmModel);
             const baseScale = 4.0 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             positions.forEach(p => {
-                const tree = model.clone();
+                const tree = palmModel.clone();
                 const s = baseScale * p.scale;
                 tree.scale.setScalar(s);
                 tree.position.set(p.x, -0.5, p.z);
@@ -697,52 +535,41 @@ export class World {
                 this.treeInstances.push(tree);
             });
             console.log(`🌴 ${positions.length} пальм создано`);
-            this.updateVisibility();
-        };
-        if (this.modelsLoaded.palm && this.cachedModels.palm) add(this.cachedModels.palm.clone());
-        else this.createDefaultTrees();
-    }
-    
-    createDefaultTrees() {
-        if (!this.scene) return;
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a });
-        const foliageMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a });
-        const positions = [];
-        for(let i=0;i<40;i++) {
-            const angle = Math.random()*Math.PI*2;
-            const r = 10+Math.random()*38;
-            positions.push([Math.cos(angle)*r, -0.5, Math.sin(angle)*r]);
+        } else {
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a });
+            const foliageMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a });
+            positions.forEach(p => {
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.9,1.6,6), trunkMat);
+                trunk.position.set(p.x, -0.5+0.8, p.z);
+                trunk.castShadow = this.settings.shadows;
+                const f1 = new THREE.Mesh(new THREE.ConeGeometry(0.9,1.2,8), foliageMat);
+                f1.position.set(p.x, -0.5+1.7, p.z);
+                const f2 = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.0,8), foliageMat);
+                f2.position.set(p.x, -0.5+2.5, p.z);
+                const group = new THREE.Group();
+                group.add(trunk, f1, f2);
+                group.position.set(p.x,0,p.z);
+                group.visible = false;
+                this.scene.add(group);
+                this.objects.push(group);
+                this.treeInstances.push(group);
+            });
+            console.log(`🌲 ${positions.length} стандартных деревьев`);
         }
-        positions.forEach(pos => {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.9,1.6,6), trunkMat);
-            trunk.position.set(pos[0], pos[1]+0.8, pos[2]);
-            trunk.castShadow = this.settings.shadows;
-            const f1 = new THREE.Mesh(new THREE.ConeGeometry(0.9,1.2,8), foliageMat);
-            f1.position.set(pos[0], pos[1]+1.7, pos[2]);
-            const f2 = new THREE.Mesh(new THREE.ConeGeometry(0.7,1.0,8), foliageMat);
-            f2.position.set(pos[0], pos[1]+2.5, pos[2]);
-            const group = new THREE.Group();
-            group.add(trunk, f1, f2);
-            group.position.set(pos[0],0,pos[2]);
-            group.visible = false;
-            this.scene.add(group);
-            this.objects.push(group);
-            this.treeInstances.push(group);
-        });
-        console.log(`🌲 ${positions.length} стандартных деревьев`);
         this.updateVisibility();
     }
     
     addCampfireFromCache() {
         if (!this.scene) return;
-        const add = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const campfireModel = this.assetManager.getModel('campfire');
+        if (campfireModel) {
+            const box = new THREE.Box3().setFromObject(campfireModel);
             const scale = 0.7 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-            model.scale.setScalar(scale);
-            model.position.set(0, -0.2, 0);
-            model.castShadow = this.settings.shadows;
-            this.scene.add(model);
-            this.objects.push(model);
+            campfireModel.scale.setScalar(scale);
+            campfireModel.position.set(0, -0.2, 0);
+            campfireModel.castShadow = this.settings.shadows;
+            this.scene.add(campfireModel);
+            this.objects.push(campfireModel);
             const fireLight = new THREE.PointLight(0xff6600,0.45,12);
             fireLight.position.set(0,0.4,0);
             this.scene.add(fireLight);
@@ -752,9 +579,9 @@ export class World {
                 if(fireLight.parent) fireLight.intensity = 0.35 + Math.sin(Date.now()*0.01)*0.2;
             };
             animate();
-        };
-        if (this.modelsLoaded.campfire && this.cachedModels.campfire) add(this.cachedModels.campfire.clone());
-        else this.addCampfireStandard();
+        } else {
+            this.addCampfireStandard();
+        }
     }
     
     addCampfireStandard() {
@@ -794,25 +621,26 @@ export class World {
     
     addBoatFromCache() {
         if (!this.scene) return;
-        const add = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const boatModel = this.assetManager.getModel('boat');
+        if (boatModel) {
+            const box = new THREE.Box3().setFromObject(boatModel);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             const scale = 2.5 / maxDim;
-            model.scale.setScalar(scale);
-            model.position.set(42, -0.15, 38);
-            model.castShadow = this.settings.shadows;
-            model.userData = { isBoat: true, onInteract: () => window.gameInstance?.handleInteraction('boat') };
-            this.scene.add(model);
-            this.objects.push(model);
-            this.interactiveObjects.push(model);
+            boatModel.scale.setScalar(scale);
+            boatModel.position.set(42, -0.15, 38);
+            boatModel.castShadow = this.settings.shadows;
+            boatModel.userData = { isBoat: true, onInteract: () => window.gameInstance?.handleInteraction('boat') };
+            this.scene.add(boatModel);
+            this.objects.push(boatModel);
+            this.interactiveObjects.push(boatModel);
             const glow = new THREE.PointLight(0x44aaff,0.25,10);
             glow.position.set(42,0.5,38);
             this.scene.add(glow);
             this.objects.push(glow);
             console.log('🛶 Лодка готова к отплытию');
-        };
-        if (this.modelsLoaded.boat && this.cachedModels.boat) add(this.cachedModels.boat.clone());
-        else this.addBoatStandard();
+        } else {
+            this.addBoatStandard();
+        }
     }
     
     addBoatStandard() {
@@ -869,11 +697,12 @@ export class World {
     
     spawnCanister(callback) {
         if (!this.scene) return;
-        const spawn = (model) => {
-            const box = new THREE.Box3().setFromObject(model);
+        const canisterModel = this.assetManager.getModel('canister');
+        if (canisterModel) {
+            const box = new THREE.Box3().setFromObject(canisterModel);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
             const scale = 0.6 / maxDim;
-            model.scale.setScalar(scale);
+            canisterModel.scale.setScalar(scale);
             let x,z;
             do {
                 const angle = Math.random()*Math.PI*2;
@@ -881,22 +710,43 @@ export class World {
                 x = Math.cos(angle)*r;
                 z = Math.sin(angle)*r;
             } while(Math.hypot(x-42, z-38) < 8);
-            model.position.set(x, -0.2, z);
-            model.castShadow = this.settings.shadows;
-            model.userData = { onInteract: () => { callback(); this.scene.remove(model); if(glow) this.scene.remove(glow); } };
-            this.scene.add(model);
-            this.objects.push(model);
-            this.interactiveObjects.push(model);
+            canisterModel.position.set(x, -0.2, z);
+            canisterModel.castShadow = this.settings.shadows;
+            canisterModel.userData = { onInteract: () => { callback(); this.scene.remove(canisterModel); if(glow) this.scene.remove(glow); } };
+            this.scene.add(canisterModel);
+            this.objects.push(canisterModel);
+            this.interactiveObjects.push(canisterModel);
             const glow = new THREE.PointLight(0xffaa66,0.4,5);
-            glow.position.copy(model.position);
+            glow.position.copy(canisterModel.position);
             this.scene.add(glow);
             this.objects.push(glow);
-        };
-        if (this.modelsLoaded.canister && this.cachedModels.canister) spawn(this.cachedModels.canister.clone());
-        else {
+        } else {
             const dummy = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.6,0.3), new THREE.MeshStandardMaterial({ color: 0xcc8844, metalness:0.6 }));
-            spawn(dummy);
+            this.scene.add(dummy);
+            dummy.userData = { onInteract: () => { callback(); this.scene.remove(dummy); } };
+            this.objects.push(dummy);
+            this.interactiveObjects.push(dummy);
         }
+    }
+    
+    updatePlayerPosition(pos) {
+        this.playerPosition.copy(pos);
+        const now = Date.now();
+        if (now - this.lastUpdateTime > 100) {
+            this.lastUpdateTime = now;
+            this.updateVisibility();
+        }
+    }
+    
+    updateVisibility() {
+        this.treeInstances.forEach(t => {
+            t.visible = this.playerPosition.distanceTo(t.position) < this.loadDistance;
+        });
+        this.objects.forEach(obj => {
+            if (obj.userData?.isBoat) {
+                obj.visible = this.playerPosition.distanceTo(obj.position) < this.loadDistance + 10;
+            }
+        });
     }
     
     clearScene() {
