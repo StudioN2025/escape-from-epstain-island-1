@@ -3,6 +3,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class World {
     constructor(scene, settings) {
+        if (!scene) {
+            console.error('World: scene не может быть null');
+            return;
+        }
         this.scene = scene;
         this.settings = settings || { shadows: true, brightness: 0.55 };
         this.interactiveObjects = [];
@@ -20,7 +24,6 @@ export class World {
         this.lastUpdateTime = 0;
         this.sunLight = null;
         this.ambientLight = null;
-        
         this.collidables = [];
         
         this.textures = {
@@ -178,8 +181,11 @@ export class World {
         });
     }
     
-    // ========== ПОДВАЛ ==========
     async createBasement() {
+        if (!this.scene) {
+            console.error('createBasement: сцена не определена');
+            return;
+        }
         this.clearBasement();
         this.collidables = [];
         
@@ -249,6 +255,7 @@ export class World {
     }
     
     addDoorFromCache() {
+        if (!this.scene) return;
         const addDoor = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
@@ -278,6 +285,7 @@ export class World {
     }
     
     addDefaultDoor() {
+        if (!this.scene) return;
         const doorMat = new THREE.MeshStandardMaterial({ color: 0x7a5a4a });
         this.exitDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), doorMat);
         this.exitDoor.position.set(8, 0.1, -8.9);
@@ -296,6 +304,7 @@ export class World {
     }
     
     addBarrelsFromCache() {
+        if (!this.scene) return;
         const positions = [
             {x:-4,z:3,rot:0},{x:4,z:3,rot:0},{x:-4,z:-2,rot:0.5},{x:4,z:-2,rot:-0.3},
             {x:0,z:-4,rot:0.2},{x:0,z:5,rot:-0.2},{x:-2,z:-5,rot:0.4},{x:2,z:-5,rot:-0.4}
@@ -342,6 +351,7 @@ export class World {
     }
     
     addTorchesFromCache() {
+        if (!this.scene) return;
         const positions = [[-8.7,1.5,-6],[8.7,1.5,-6],[-8.7,1.5,6],[8.7,1.5,6]];
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
@@ -397,10 +407,11 @@ export class World {
     }
     
     createInteractiveObjects(interactCallback) {
+        if (!this.scene) return;
         const addKey = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-            const scale = 0.45 / maxDim; // увеличен для лучшего захвата
+            const scale = 0.45 / maxDim;
             model.scale.setScalar(scale);
             model.position.set(-3, 0, 4);
             const minY = new THREE.Box3().setFromObject(model).min.y;
@@ -439,6 +450,7 @@ export class World {
     }
     
     createDefaultKey(interactCallback) {
+        if (!this.scene) return;
         const group = new THREE.Group();
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 24, 48), new THREE.MeshStandardMaterial({ color: 0xffaa44, metalness: 0.9 }));
         ring.rotation.x = Math.PI/2;
@@ -469,11 +481,12 @@ export class World {
         glow.position.set(-3, 0.4, 4);
         this.scene.add(glow);
         this.basementObjects.push(glow);
-        console.log('🔑 Ключ (стандартная модель) создан и добавлен в interactiveObjects');
+        console.log('🔑 Ключ (стандартная модель) создан');
     }
     
     showExitDoor() {
-        if(this.exitDoor) this.exitDoor.userData = { onInteract: () => window.gameInstance?.handleInteraction('door') };
+        if (!this.scene || !this.exitDoor) return;
+        this.exitDoor.userData = { onInteract: () => window.gameInstance?.handleInteraction('door') };
         this.interactiveObjects.push(this.exitDoor);
         const glow = new THREE.PointLight(0xffaa44,0.25,4);
         glow.position.copy(this.exitDoor.position);
@@ -494,8 +507,8 @@ export class World {
         this.collidables = [];
     }
     
-    // ========== ОСТРОВ ==========
     createIsland() {
+        if (!this.scene) return;
         this.clearBasement();
         this.scene.background = new THREE.Color(0x6a8aad);
         this.scene.fog = new THREE.FogExp2(0x6a8aad, 0.003);
@@ -581,6 +594,7 @@ export class World {
     }
     
     addHouse() {
+        if (!this.scene) return;
         const addHouseModel = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
@@ -592,7 +606,6 @@ export class World {
             model.receiveShadow = true;
             this.scene.add(model);
             this.objects.push(model);
-            
             const finalBox = new THREE.Box3().setFromObject(model);
             const min = finalBox.min;
             const max = finalBox.max;
@@ -640,6 +653,7 @@ export class World {
     }
     
     setupSunLighting() {
+        if (!this.scene) return;
         if (this.sunLight) this.scene.remove(this.sunLight);
         if (this.ambientLight) this.scene.remove(this.ambientLight);
         const b = this.settings.brightness || 0.55;
@@ -661,6 +675,7 @@ export class World {
     }
     
     createTreesFromCache() {
+        if (!this.scene) return;
         const positions = [];
         for(let i=0;i<40;i++) {
             const angle = Math.random()*Math.PI*2;
@@ -689,6 +704,7 @@ export class World {
     }
     
     createDefaultTrees() {
+        if (!this.scene) return;
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a2a });
         const foliageMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a });
         const positions = [];
@@ -718,6 +734,7 @@ export class World {
     }
     
     addCampfireFromCache() {
+        if (!this.scene) return;
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const scale = 0.7 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
@@ -741,6 +758,7 @@ export class World {
     }
     
     addCampfireStandard() {
+        if (!this.scene) return;
         const logMat = new THREE.MeshStandardMaterial({ color: 0x7a4a2a });
         const fireMat = new THREE.MeshStandardMaterial({ color: 0xff6600, emissive:0xff3300 });
         const stoneMat = new THREE.MeshStandardMaterial({ color: 0x887a6a });
@@ -775,6 +793,7 @@ export class World {
     }
     
     addBoatFromCache() {
+        if (!this.scene) return;
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
@@ -797,6 +816,7 @@ export class World {
     }
     
     addBoatStandard() {
+        if (!this.scene) return;
         const group = new THREE.Group();
         const body = new THREE.Mesh(new THREE.BoxGeometry(3,0.6,5), new THREE.MeshStandardMaterial({ color: 0x7a5a4a }));
         body.castShadow = this.settings.shadows;
@@ -819,6 +839,7 @@ export class World {
     }
     
     addRocks() {
+        if (!this.scene) return;
         const mat = new THREE.MeshStandardMaterial({ color: 0x6a6a5a });
         for(let i=0;i<60;i++) {
             const angle = Math.random()*Math.PI*2;
@@ -833,6 +854,7 @@ export class World {
     }
     
     addFlowers() {
+        if (!this.scene) return;
         const colors = [0xffaa66,0xff66aa,0xaa66ff,0xff6666];
         for(let i=0;i<200;i++) {
             const angle = Math.random()*Math.PI*2;
@@ -846,6 +868,7 @@ export class World {
     }
     
     spawnCanister(callback) {
+        if (!this.scene) return;
         const spawn = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
