@@ -257,10 +257,17 @@ export class Game {
     handleInteraction(type, data) {
         switch(type) {
             case 'key':
-                console.log('🔑 Ключ подобран! Добавляем в инвентарь');
+                console.log('🔑 Обработка ключа');
                 this.inventory.addItem('key', '🔑');
                 this.story.completeQuest('find_key');
-                this.ui.showMessage('🔑 Вы нашли ключ!', 3000);
+                this.ui.showMessage('🔑 Вы нашли ключ! Нажмите F, чтобы открыть инвентарь.', 5000);
+                // Автоматически показать инвентарь на 3 секунды
+                if (!this.inventoryOpen) {
+                    this.toggleInventory();
+                    setTimeout(() => {
+                        if (this.inventoryOpen) this.toggleInventory();
+                    }, 3000);
+                }
                 this.world.showExitDoor();
                 break;
             case 'door':
