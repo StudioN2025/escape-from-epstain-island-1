@@ -1,7 +1,6 @@
 // MenuScene.js
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { World } from './World.js';
 
 export class MenuScene {
     constructor(assetManager, onStartCallback) {
@@ -16,7 +15,7 @@ export class MenuScene {
         this.clock = new THREE.Clock();
         this.startButton = null;
         this.animationId = null;
-        this.world = null;
+        this.audio = null;
         this.init();
     }
     
@@ -26,7 +25,7 @@ export class MenuScene {
         this.scene.fog = new THREE.FogExp2(0x6a8aad, 0.003);
         
         this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(15, 10, 18);
+        this.camera.position.set(12, 8, 15);
         this.camera.lookAt(0, 2, 0);
         
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -38,13 +37,12 @@ export class MenuScene {
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
         this.controls.autoRotate = true;
-        this.controls.autoRotateSpeed = 0.8;
+        this.controls.autoRotateSpeed = 0.6;
         this.controls.enableZoom = true;
-        this.controls.enablePan = true;
         this.controls.target.set(0, 2, 0);
         
-        // Создаём полноценный остров через World (но без подвала и монстра)
-        this.createMenuWorld();
+        // Создаём красивый остров для меню
+        this.createMenuIsland();
         
         // Загружаем танцующего Эпштейна из flair.fbx
         this.loadFlairEpstein();
@@ -63,12 +61,8 @@ export class MenuScene {
         this.animate();
     }
     
-    createMenuWorld() {
-        // Создаём World без передачи assetManager? Нет, используем тот же assetManager
-        // Но нам нужен только визуальный остров без коллизий и интерактива
-        // Поэтому создадим упрощённую версию острова
-        
-        // Получаем текстуры
+    createMenuIsland() {
+        // Текстуры
         const grassTex = this.assetManager.getTexture('grass');
         const sandTex = this.assetManager.getTexture('sand');
         
@@ -80,7 +74,7 @@ export class MenuScene {
         ground.receiveShadow = true;
         this.scene.add(ground);
         
-        // Песок по краям
+        // Песок
         const sandMat = new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.8 });
         const sandRing = new THREE.Mesh(new THREE.RingGeometry(45, 50, 32), sandMat);
         sandRing.rotation.x = -Math.PI / 2;
@@ -90,7 +84,7 @@ export class MenuScene {
         
         // Холмы
         const hillMat = new THREE.MeshStandardMaterial({ color: 0x5a8a4a });
-        for(let i = 0; i < 30; i++) {
+        for(let i = 0; i < 35; i++) {
             const angle = Math.random() * Math.PI * 2;
             const r = 10 + Math.random() * 35;
             const hill = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.8, 0.4, 8), hillMat);
@@ -99,11 +93,11 @@ export class MenuScene {
             this.scene.add(hill);
         }
         
-        // Пальмы (из загруженной модели)
+        // Пальмы
         const palmModel = this.assetManager.getModel('palm');
         if (palmModel) {
             const positions = [];
-            for(let i = 0; i < 35; i++) {
+            for(let i = 0; i < 40; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const r = 12 + Math.random() * 36;
                 positions.push({ x: Math.cos(angle) * r, z: Math.sin(angle) * r, scale: 0.7 + Math.random() * 0.6 });
@@ -119,8 +113,6 @@ export class MenuScene {
                 this.scene.add(tree);
             });
             console.log('🌴 Пальмы добавлены в меню');
-        } else {
-            console.warn('Модель пальмы не загружена');
         }
         
         // Дом
@@ -136,11 +128,9 @@ export class MenuScene {
             houseModel.receiveShadow = true;
             this.scene.add(houseModel);
             console.log('🏠 Дом добавлен в меню');
-        } else {
-            console.warn('Модель дома не загружена');
         }
         
-        // Костёр
+        // Костёр с анимацией огня
         const campfireModel = this.assetManager.getModel('campfire');
         if (campfireModel) {
             const box = new THREE.Box3().setFromObject(campfireModel);
@@ -189,15 +179,9 @@ export class MenuScene {
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 1024;
         sunLight.shadow.mapSize.height = 1024;
-        sunLight.shadow.camera.left = -25;
-        sunLight.shadow.camera.right = 25;
-        sunLight.shadow.camera.top = 25;
-        sunLight.shadow.camera.bottom = -25;
-        sunLight.shadow.camera.near = 0.5;
-        sunLight.shadow.camera.far = 80;
         this.scene.add(sunLight);
         
-        // Добавляем облака для атмосферы
+        // Облака
         const cloudMat = new THREE.MeshStandardMaterial({ color: 0xeeeeff, transparent: true, opacity: 0.7 });
         const cloudPositions = [[-15, 12, -10], [10, 14, -5], [0, 13, -15], [20, 11, 0], [-20, 13, 5]];
         cloudPositions.forEach(pos => {
@@ -213,12 +197,12 @@ export class MenuScene {
             this.scene.add(cloudGroup);
         });
         
-        console.log('🏝️ Полноценный остров для меню создан');
+        console.log('🏝️ Остров для меню создан');
     }
     
     loadFlairEpstein() {
-        // Загружаем танцующего Эпштейна из flair.fbx
-        const flairModel = this.assetManager.getModel('dance'); // dance.fbx = flair.fbx
+        // Используем ТОЛЬКО flair.fbx для меню
+        const flairModel = this.assetManager.getModel('flair');
         if (flairModel) {
             this.epsteinModel = flairModel;
             // Настройка размера и позиции
@@ -228,15 +212,15 @@ export class MenuScene {
             this.epsteinModel.castShadow = true;
             this.scene.add(this.epsteinModel);
             
-            // Анимация
+            // Запускаем анимацию, если есть
             if (this.epsteinModel.animations && this.epsteinModel.animations.length > 0) {
                 this.mixer = new THREE.AnimationMixer(this.epsteinModel);
                 const action = this.mixer.clipAction(this.epsteinModel.animations[0]);
                 action.play();
-                console.log('🎬 Эпштейн жестко денсит в меню!');
+                console.log('🕺 Эпштейн из flair.fbx жестко денсит в меню!');
             } else {
-                console.warn('Анимация не найдена в flair.fbx, делаем простую покачку');
-                this.animateEpsteinSimple = () => {
+                console.warn('⚠️ Анимация в flair.fbx не найдена, делаем простую покачку');
+                this.simpleDanceAnimation = () => {
                     if (this.epsteinModel) {
                         const time = Date.now() * 0.004;
                         this.epsteinModel.rotation.y = -Math.PI / 4 + Math.sin(time) * 0.2;
@@ -245,14 +229,15 @@ export class MenuScene {
                 };
             }
         } else {
-            console.warn('⚠️ Модель flair.fbx не загружена, создаю заглушку');
+            console.error('❌ Модель flair.fbx не загружена! Проверьте путь assets/models/flair.fbx');
+            // Создаём заглушку
             const geometry = new THREE.SphereGeometry(0.8, 32, 32);
-            const material = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
+            const material = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
             const dummy = new THREE.Mesh(geometry, material);
             dummy.position.set(0, 0.8, 3.5);
             dummy.castShadow = true;
             this.scene.add(dummy);
-            this.animateEpsteinSimple = () => {
+            this.simpleDanceAnimation = () => {
                 const time = Date.now() * 0.004;
                 dummy.rotation.y = Math.sin(time) * 0.3;
                 dummy.position.y = 0.8 + Math.sin(time * 2) * 0.08;
@@ -300,8 +285,8 @@ export class MenuScene {
         // Обновление анимации Эпштейна
         if (this.mixer) {
             this.mixer.update(this.clock.getDelta());
-        } else if (this.animateEpsteinSimple) {
-            this.animateEpsteinSimple();
+        } else if (this.simpleDanceAnimation) {
+            this.simpleDanceAnimation();
         }
         
         this.controls.update();
@@ -328,6 +313,6 @@ export class MenuScene {
         this.scene = null;
         this.camera = null;
         this.controls = null;
-        console.log('🎬 Меню уничтожено');
+        console.log('🎬 Меню уничтожено, Эпштейн из flair.fbx удалён');
     }
 }
