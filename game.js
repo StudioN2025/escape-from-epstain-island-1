@@ -267,7 +267,9 @@ export class Game {
             case 'key':
                 console.log('🔑 Ключ подобран! Добавляем в инвентарь');
                 if (this.inventory) {
-                    this.inventory.addItem('key', '🔑');
+                    const added = this.inventory.addItem('key', '🔑');
+                    console.log('KEY ADDED:', added, this.inventory.items);
+                    this.inventory.updateUI();
                 } else {
                     console.error('Инвентарь не инициализирован');
                 }

@@ -31,6 +31,7 @@ export class Inventory {
     }
     
     addItem(id, icon) {
+        if (this.hasItem(id)) return true;
         const free = this.items.findIndex(item => item === null);
         console.log(`Добавление предмета ${id}, свободный слот: ${free}`);
         if (free !== -1) {
