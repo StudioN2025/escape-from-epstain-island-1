@@ -42,9 +42,9 @@ export class MenuScene {
         this.controls.enableZoom = true;
         this.controls.target.set(0, 2, 0);
         
-        // Создаём остров через World (без подвала, только остров)
+        // Создаём остров через World (без подвала)
         this.world = new World(this.scene, { shadows: true, brightness: 0.55 });
-        this.world.createIsland();   // остров с домом, пальмами, костром
+        this.world.createIsland();
         
         // Загружаем танцующего Эпштейна
         const loader = new FBXLoader();
