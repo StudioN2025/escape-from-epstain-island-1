@@ -16,7 +16,7 @@ export class MenuScene {
         this.clock = new THREE.Clock();
         this.startButton = null;
         this.animationId = null;
-        this.world = null; // для создания острова
+        this.world = null;
         this.init();
     }
     
@@ -42,18 +42,16 @@ export class MenuScene {
         this.controls.enableZoom = true;
         this.controls.target.set(0, 2, 0);
         
-        // Создаём остров через World (без подвала и монстра, только остров)
+        // Создаём остров через World (без подвала, только остров)
         this.world = new World(this.scene, { shadows: true, brightness: 0.55 });
-        this.world.createIsland();   // создаёт остров с домом, пальмами, костром, лодкой
-        
-        // Но лодка не нужна в меню, можно её скрыть, но не обязательно
+        this.world.createIsland();   // остров с домом, пальмами, костром
         
         // Загружаем танцующего Эпштейна
         const loader = new FBXLoader();
         loader.load('assets/models/dance.fbx', (fbx) => {
             this.epsteinModel = fbx;
             fbx.scale.setScalar(0.045);
-            fbx.position.set(0, 0, 2); // перед домом
+            fbx.position.set(0, 0, 2);
             fbx.rotation.y = -Math.PI / 4;
             fbx.castShadow = true;
             this.scene.add(fbx);
@@ -73,7 +71,6 @@ export class MenuScene {
             this.scene.add(dummy);
         });
         
-        // Анимация для заглушки
         this.animateEpstein = () => {
             if (this.mixer) this.mixer.update(this.clock.getDelta());
             else if (this.epsteinModel) {
@@ -83,7 +80,6 @@ export class MenuScene {
             }
         };
         
-        // Музыка
         this.audio = new Audio('assets/sounds/menu.mp3');
         this.audio.loop = true;
         this.audio.volume = 0.6;
