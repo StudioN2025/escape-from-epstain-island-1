@@ -17,10 +17,7 @@ export class Monster {
     }
     
     createMesh() {
-        if (!this.scene) {
-            console.error('Нет сцены для создания модели');
-            return;
-        }
+        if (!this.scene) return;
         const group = new THREE.Group();
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ color: 0xcc4444, emissive: 0x331111, roughness: 0.3 });
