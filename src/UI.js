@@ -4,7 +4,7 @@ export class UIManager {
         this.messageText = document.getElementById('message-text');
         this.questText = document.getElementById('quest-text');
         this.prompt = document.getElementById('interaction-prompt');
-        this.menu = document.getElementById('menu-overlay');
+        this.menu = document.getElementById('menu-overlay') || null;
         this.gameOverScreen = document.getElementById('game-over');
         this.winScreen = document.getElementById('win-screen');
         
