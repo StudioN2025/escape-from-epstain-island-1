@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { AssetManager } from './AssetManager.js';
 import { MenuScene } from './src/MenuScene.js';
 import { Game } from './game.js';
 
@@ -27,11 +26,13 @@ async function startLoadingResources() {
     loadingStatus.innerText = 'Загрузка текстур...';
     
     const resources = [
+        // Текстуры
         { type: 'texture', path: 'assets/textures/stucco-5.jpg', name: 'stuccoWall' },
         { type: 'texture', path: 'assets/textures/stucco-9.jpg', name: 'stuccoCeiling' },
         { type: 'texture', path: 'assets/textures/sand-1.jpg', name: 'sand' },
         { type: 'texture', path: 'assets/textures/grass-2.jpg', name: 'grass' },
         { type: 'texture', path: 'assets/textures/laminate-2.jpg', name: 'laminate' },
+        // Модели
         { type: 'model', path: 'assets/models/key.glb', name: 'key' },
         { type: 'model', path: 'assets/models/date_palm.glb', name: 'palm' },
         { type: 'model', path: 'assets/models/campfire.glb', name: 'campfire' },
@@ -42,67 +43,26 @@ async function startLoadingResources() {
         { type: 'model', path: 'assets/models/canister.glb', name: 'canister' },
         { type: 'model', path: 'assets/models/house.glb', name: 'house' },
         { type: 'model', path: 'assets/models/dance.fbx', name: 'dance' },
+        { type: 'model', path: 'assets/models/epstein_run.fbx', name: 'epstein_run' },
+        // Звуки
         { type: 'sound', path: 'assets/sounds/menu.mp3', name: 'menu' },
         { type: 'sound', path: 'assets/sounds/death.mp3', name: 'death' },
         { type: 'sound', path: 'assets/sounds/win.mp3', name: 'win' },
     ];
     
-    const total = resources.length;
-    let loaded = 0;
+    const assetManager = new AssetManager();
     
-    const updateProgress = (status) => {
-        loaded++;
-        const percent = Math.floor((loaded / total) * 100);
+    await assetManager.loadAll(resources, (percent, status) => {
         loadingBar.style.width = percent + '%';
         loadingPercent.innerText = percent + '%';
         loadingStatus.innerText = status;
-    };
-    
-    const textureLoader = new THREE.TextureLoader();  // теперь THREE определён
-    const gltfLoader = new GLTFLoader();
-    const fbxLoader = new FBXLoader();
-    
-    const loadPromises = resources.map(res => {
-        return new Promise((resolve) => {
-            if (res.type === 'texture') {
-                textureLoader.load(res.path, (texture) => {
-                    updateProgress(`Текстура: ${res.name}`);
-                    resolve();
-                }, undefined, () => {
-                    updateProgress(`Ошибка: ${res.name}`);
-                    resolve();
-                });
-            } else if (res.type === 'model') {
-                const loader = res.path.endsWith('.fbx') ? fbxLoader : gltfLoader;
-                loader.load(res.path, (model) => {
-                    updateProgress(`Модель: ${res.name}`);
-                    resolve();
-                }, undefined, (err) => {
-                    console.warn(`Ошибка модели ${res.name}:`, err);
-                    updateProgress(`Ошибка: ${res.name}`);
-                    resolve();
-                });
-            } else if (res.type === 'sound') {
-                const audio = new Audio(res.path);
-                audio.addEventListener('canplaythrough', () => {
-                    updateProgress(`Звук: ${res.name}`);
-                    resolve();
-                });
-                audio.addEventListener('error', () => {
-                    updateProgress(`Ошибка звука: ${res.name}`);
-                    resolve();
-                });
-                audio.load();
-            }
-        });
     });
     
-    await Promise.all(loadPromises);
     loadingStatus.innerText = 'Готово!';
     setTimeout(() => {
         loadingScreen.style.display = 'none';
-        const menu = new MenuScene(() => {
-            const game = new Game();
+        const menu = new MenuScene(assetManager, () => {
+            const game = new Game(assetManager);
             game.start();
         });
     }, 500);
