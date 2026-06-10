@@ -8,6 +8,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
         body { overflow: hidden; font-family: 'Courier New', monospace; }
+        
         #welcome-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: black; z-index: 500; display: flex; justify-content: center;
@@ -29,6 +30,7 @@
         .loading-text { font-size: 24px; margin-top: 20px; color: #ffaa44; font-weight: bold; }
         .loading-bar-container { width: 300px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 20px auto; overflow: hidden; }
         .loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffaa44, #ffcc66); border-radius: 10px; transition: width 0.3s; }
+        
         #game-ui {
             position: fixed; width: 100%; height: 100%; pointer-events: none; z-index: 10;
         }
@@ -45,6 +47,7 @@
             font-weight: bold; pointer-events: none;
         }
         @keyframes pulse { 0% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.05); } 100% { opacity: 0.7; transform: translateX(-50%) scale(1); } }
+        
         #inventory {
             position: absolute; bottom: 20px; right: 20px;
             background: rgba(0,0,0,0.8); border-radius: 12px; padding: 10px;
@@ -58,6 +61,7 @@
         }
         .inventory-slot span:first-child { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #aaa; }
         .slot-item { font-size: 28px; }
+        
         #quest-log {
             position: absolute; top: 20px; left: 20px;
             background: rgba(0,0,0,0.8); padding: 12px 20px; border-radius: 8px;
@@ -66,6 +70,7 @@
         }
         #quest-log h3 { color: #ffaa44; font-size: 14px; margin-bottom: 5px; }
         #quest-text { color: white; font-size: 12px; line-height: 1.4; }
+        
         #message-area {
             position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.85); color: #ffaa44; padding: 10px 20px;
@@ -73,6 +78,7 @@
             pointer-events: none; white-space: nowrap; font-weight: bold;
         }
         @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        
         #status {
             position: absolute; top: 20px; right: 20px;
             background: rgba(0,0,0,0.8); color: #ffaa88; padding: 10px 18px;
@@ -85,6 +91,7 @@
             border-radius: 10px; overflow: hidden; border: 1px solid #ffaa44;
         }
         #stamina-value { width: 100%; height: 100%; background: #44ff44; transition: width 0.1s; }
+        
         #death-overlay, #win-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: black; z-index: 300; pointer-events: none; opacity: 0; transition: opacity 0.5s;
@@ -106,7 +113,6 @@
             align-items: center; z-index: 100; backdrop-filter: blur(5px);
         }
         .hidden { display: none !important; }
-        @media (max-width: 600px) { #quest-log { max-width: 200px; } #stamina-bar { width: 120px; } }
     </style>
 </head>
 <body>
@@ -139,12 +145,8 @@
         <div id="stamina-bar"><div id="stamina-value"></div></div>
     </div>
 
-    <div id="game-over" class="hidden">
-        <div class="game-over-content"><h2>💀 ВАС СХВАТИЛ ЭПШТЕЙН 💀</h2><p>Вы не смогли сбежать с его острова...</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div>
-    </div>
-    <div id="win-screen" class="hidden">
-        <div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы уплыли с острова Эпштейна!<br>Эпштейн остался позади, сжимая кулаки.</p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div>
-    </div>
+    <div id="game-over" class="hidden"><div class="game-over-content"><h2>💀 ВАС СХВАТИЛ ЭПШТЕЙН 💀</h2><p>Вы не смогли сбежать с его острова...</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div></div>
+    <div id="win-screen" class="hidden"><div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы уплыли с острова Эпштейна!<br>Эпштейн остался позади, сжимая кулаки.</p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div></div>
 
     <script type="importmap">
         {
