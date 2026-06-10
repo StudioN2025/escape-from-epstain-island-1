@@ -1,8 +1,5 @@
 import { MenuScene } from './src/MenuScene.js';
 import { Game } from './game.js';
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 const welcomeScreen = document.getElementById('welcome-screen');
 const loadingScreen = document.getElementById('loading-screen');
@@ -41,8 +38,7 @@ async function startLoadingResources() {
         { type: 'model', path: 'assets/models/medieval_door.glb', name: 'door' },
         { type: 'model', path: 'assets/models/canister.glb', name: 'canister' },
         { type: 'model', path: 'assets/models/house.glb', name: 'house' },
-        { type: 'model', path: 'assets/models/dance.fbx', name: 'dance' },   // модель для меню
-        { type: 'model', path: 'assets/models/epstein_run.fbx', name: 'epstein_run' }, // опционально
+        { type: 'model', path: 'assets/models/dance.fbx', name: 'dance' },
         { type: 'sound', path: 'assets/sounds/menu.mp3', name: 'menu' },
         { type: 'sound', path: 'assets/sounds/death.mp3', name: 'death' },
         { type: 'sound', path: 'assets/sounds/win.mp3', name: 'win' },
@@ -60,8 +56,8 @@ async function startLoadingResources() {
     };
     
     const textureLoader = new THREE.TextureLoader();
-    const gltfLoader = new GLTFLoader();
-    const fbxLoader = new FBXLoader();
+    const gltfLoader = new THREE.GLTFLoader();
+    const fbxLoader = new THREE.FBXLoader();
     
     const loadPromises = resources.map(res => {
         return new Promise((resolve) => {
@@ -78,8 +74,9 @@ async function startLoadingResources() {
                 loader.load(res.path, (model) => {
                     updateProgress(`Модель: ${res.name}`);
                     resolve();
-                }, undefined, () => {
-                    updateProgress(`Ошибка модели: ${res.name}`);
+                }, undefined, (err) => {
+                    console.warn(`Ошибка модели ${res.name}:`, err);
+                    updateProgress(`Ошибка: ${res.name}`);
                     resolve();
                 });
             } else if (res.type === 'sound') {
@@ -101,7 +98,6 @@ async function startLoadingResources() {
     loadingStatus.innerText = 'Готово!';
     setTimeout(() => {
         loadingScreen.style.display = 'none';
-        // Создаём меню, передаём колбэк для запуска игры
         const menu = new MenuScene(() => {
             const game = new Game();
             game.start();
