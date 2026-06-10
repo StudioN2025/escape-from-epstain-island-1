@@ -8,7 +8,7 @@ export class Inventory {
     createUI() {
         const invDiv = document.getElementById('inventory');
         if (!invDiv) {
-            console.error('Элемент #inventory не найден!');
+            console.error('Элемент #inventory не найден в DOM!');
             return;
         }
         invDiv.innerHTML = '';
