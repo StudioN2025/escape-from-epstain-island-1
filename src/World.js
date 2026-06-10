@@ -396,30 +396,37 @@ export class World {
         }
     }
     
-    createInteractiveObjects(callback) {
+    createInteractiveObjects(interactCallback) {
         const addKey = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
-            const scale = 0.25 / maxDim;
+            const scale = 0.45 / maxDim; // увеличен для лучшего захвата
             model.scale.setScalar(scale);
             model.position.set(-3, 0, 4);
             const minY = new THREE.Box3().setFromObject(model).min.y;
-            model.position.y += -minY + 0.05;
+            model.position.y += -minY + 0.1;
             model.castShadow = this.settings.shadows;
-            model.userData = { onInteract: () => { callback('key'); this.scene.remove(model); } };
+            model.userData = { 
+                onInteract: () => { 
+                    console.log('🔑 ВЗАИМОДЕЙСТВИЕ С КЛЮЧОМ (GLB)');
+                    interactCallback('key'); 
+                    this.scene.remove(model); 
+                } 
+            };
             this.scene.add(model);
             this.basementObjects.push(model);
             this.interactiveObjects.push(model);
-            const glow = new THREE.PointLight(0xffaa44, 0.2, 3);
-            glow.position.set(-3, 0.25, 4);
+            const glow = new THREE.PointLight(0xffaa44, 0.3, 3);
+            glow.position.set(-3, 0.3, 4);
             this.scene.add(glow);
             this.basementObjects.push(glow);
-            console.log('🔑 Ключ добавлен');
+            console.log('🔑 Ключ (GLB) добавлен в interactiveObjects');
         };
+        
         if (this.modelsLoaded.key && this.cachedModels.key) {
             addKey(this.cachedModels.key.clone());
         } else {
-            this.createDefaultKey(callback);
+            this.createDefaultKey(interactCallback);
             const check = setInterval(() => {
                 if (this.modelsLoaded.key && this.cachedModels.key) {
                     clearInterval(check);
@@ -431,29 +438,38 @@ export class World {
         }
     }
     
-    createDefaultKey(callback) {
+    createDefaultKey(interactCallback) {
         const group = new THREE.Group();
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.18,0.05,16,32), new THREE.MeshStandardMaterial({ color: 0xffaa44, metalness: 0.9 }));
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.07, 24, 48), new THREE.MeshStandardMaterial({ color: 0xffaa44, metalness: 0.9 }));
         ring.rotation.x = Math.PI/2;
         ring.rotation.z = Math.PI/4;
         group.add(ring);
-        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.35), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
-        shaft.position.set(0.25,0,0);
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
+        shaft.position.set(0.3, 0, 0);
         group.add(shaft);
-        const tooth1 = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.08), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
-        tooth1.position.set(0.45,-0.05,0);
-        const tooth2 = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.12,0.08), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
-        tooth2.position.set(0.45,0.05,0);
+        const tooth1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.1), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
+        tooth1.position.set(0.55, -0.07, 0);
+        const tooth2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.1), new THREE.MeshStandardMaterial({ color: 0xffaa44 }));
+        tooth2.position.set(0.55, 0.07, 0);
         group.add(tooth1, tooth2);
-        group.position.set(-3,0.1,4);
-        group.userData = { isDefaultKey: true, onInteract: () => { callback('key'); this.scene.remove(group); } };
+        group.position.set(-3, 0.15, 4);
+        group.castShadow = true;
+        group.userData = { 
+            isDefaultKey: true, 
+            onInteract: () => { 
+                console.log('🔑 ВЗАИМОДЕЙСТВИЕ С КЛЮЧОМ (Default)');
+                interactCallback('key'); 
+                this.scene.remove(group); 
+            } 
+        };
         this.scene.add(group);
         this.basementObjects.push(group);
         this.interactiveObjects.push(group);
-        const glow = new THREE.PointLight(0xffaa44,0.2,3);
-        glow.position.set(-3,0.25,4);
+        const glow = new THREE.PointLight(0xffaa44, 0.3, 3);
+        glow.position.set(-3, 0.4, 4);
         this.scene.add(glow);
         this.basementObjects.push(glow);
+        console.log('🔑 Ключ (стандартная модель) создан и добавлен в interactiveObjects');
     }
     
     showExitDoor() {
@@ -568,16 +584,15 @@ export class World {
         const addHouseModel = (model) => {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
-            const targetSize = 10.0;   // размер
+            const targetSize = 10.0;
             const scale = targetSize / Math.max(size.x, size.y, size.z);
             model.scale.setScalar(scale);
-            model.position.set(0, 2.0, 0); // высота
+            model.position.set(0, 2.0, 0);
             model.castShadow = true;
             model.receiveShadow = true;
             this.scene.add(model);
             this.objects.push(model);
             
-            // Хитбокс для дома
             const finalBox = new THREE.Box3().setFromObject(model);
             const min = finalBox.min;
             const max = finalBox.max;
@@ -762,7 +777,8 @@ export class World {
     addBoatFromCache() {
         const add = (model) => {
             const box = new THREE.Box3().setFromObject(model);
-            const scale = 2.5 / Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const maxDim = Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+            const scale = 2.5 / maxDim;
             model.scale.setScalar(scale);
             model.position.set(42, -0.15, 38);
             model.castShadow = this.settings.shadows;
@@ -774,6 +790,7 @@ export class World {
             glow.position.set(42,0.5,38);
             this.scene.add(glow);
             this.objects.push(glow);
+            console.log('🛶 Лодка готова к отплытию');
         };
         if (this.modelsLoaded.boat && this.cachedModels.boat) add(this.cachedModels.boat.clone());
         else this.addBoatStandard();
