@@ -7,7 +7,10 @@ export class Inventory {
     
     createUI() {
         const invDiv = document.getElementById('inventory');
-        if (!invDiv) return;
+        if (!invDiv) {
+            console.error('Элемент #inventory не найден в DOM!');
+            return;
+        }
         invDiv.innerHTML = '';
         invDiv.style.display = 'flex';
         invDiv.style.gap = '10px';
@@ -24,15 +27,19 @@ export class Inventory {
             this.slots.push({ slot, itemSpan });
         }
         this.updateUI();
+        console.log('Инвентарь создан, слотов:', this.slots.length);
     }
     
     addItem(id, icon) {
         const free = this.items.findIndex(item => item === null);
+        console.log(`Добавление предмета ${id}, свободный слот: ${free}`);
         if (free !== -1) {
             this.items[free] = { id, icon };
             this.updateUI();
+            console.log(`Предмет ${id} добавлен в слот ${free}. Инвентарь:`, this.items);
             return true;
         }
+        console.warn(`Нет свободного слота для ${id}`);
         return false;
     }
     
