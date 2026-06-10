@@ -2,6 +2,10 @@ import * as THREE from 'three';
 
 export class Monster {
     constructor(scene) {
+        if (!scene) {
+            console.error('Ошибка: scene не передан в Monster');
+            return;
+        }
         this.scene = scene;
         this.mesh = null;
         this.active = false;
@@ -13,6 +17,10 @@ export class Monster {
     }
     
     createMesh() {
+        if (!this.scene) {
+            console.error('Нет сцены для создания модели');
+            return;
+        }
         const group = new THREE.Group();
         const geometry = new THREE.SphereGeometry(0.9, 32, 32);
         const material = new THREE.MeshStandardMaterial({ color: 0xcc4444, emissive: 0x331111, roughness: 0.3 });
@@ -48,12 +56,12 @@ export class Monster {
     }
     
     replaceWithFBX(fbx) {
-        if (this.mesh) this.scene.remove(this.mesh);
+        if (this.mesh && this.scene) this.scene.remove(this.mesh);
         this.mesh = fbx;
         this.mesh.position.set(this.position.x, 0, this.position.z);
         this.mesh.castShadow = true;
         this.useFBX = true;
-        this.scene.add(this.mesh);
+        if (this.scene) this.scene.add(this.mesh);
         console.log('👔 Модель Эпштейна загружена');
     }
     
@@ -66,31 +74,27 @@ export class Monster {
     
     update(playerPos, deltaTime) {
         if (!this.active) return false;
-        
         const dx = playerPos.x - this.position.x;
         const dz = playerPos.z - this.position.z;
         const distance = Math.hypot(dx, dz);
-        
         if (distance < 1.4) {
             console.log('💀 ЭПШТЕЙН СХВАТИЛ ВАС!');
             return true;
         }
-        
         if (distance < 50) {
             const dirX = dx / distance;
             const dirZ = dz / distance;
             const angle = Math.atan2(dirX, dirZ);
-            this.mesh.rotation.y = angle;
+            if (this.mesh) this.mesh.rotation.y = angle;
             this.position.x += dirX * this.speed * deltaTime;
             this.position.z += dirZ * this.speed * deltaTime;
             this.position.x = Math.max(-47, Math.min(47, this.position.x));
             this.position.z = Math.max(-47, Math.min(47, this.position.z));
             this.position.y = 0;
-            this.mesh.position.copy(this.position);
-            
+            if (this.mesh) this.mesh.position.copy(this.position);
             const time = Date.now() * 0.012;
             const scale = 1 + Math.sin(time) * 0.05;
-            this.mesh.scale.set(scale, scale, scale);
+            if (this.mesh) this.mesh.scale.set(scale, scale, scale);
         }
         return false;
     }
