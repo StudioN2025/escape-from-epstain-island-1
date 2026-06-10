@@ -8,7 +8,8 @@ import { StoryManager } from './src/StoryManager.js';
 import { UIManager } from './src/UI.js';
 
 export class Game {
-    constructor() {
+    constructor(assetManager) {
+        this.assetManager = assetManager;
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -112,10 +113,8 @@ export class Game {
         this.updateLoadingProgress(90, 'Загрузка модели Эпштейна...');
         await this.loadEpsteinFBX();
         
-        this.deathSound = new Audio('assets/sounds/death.mp3');
-        this.deathSound.load();
-        this.winSound = new Audio('assets/sounds/win.mp3');
-        this.winSound.load();
+        this.deathSound = this.assetManager.getSound('death');
+        this.winSound = this.assetManager.getSound('win');
         
         this.updateLoadingProgress(100, 'Готово!');
         setTimeout(() => {
@@ -129,34 +128,31 @@ export class Game {
     }
     
     async loadEpsteinFBX() {
-        const loader = new FBXLoader();
-        const fbxPath = 'assets/models/epstein_run.fbx';
-        return new Promise((resolve) => {
-            loader.load(fbxPath, (fbx) => {
-                if (this.epstein.mesh) this.scene.remove(this.epstein.mesh);
-                fbx.scale.setScalar(0.02);
-                fbx.position.copy(this.epstein.position);
-                fbx.castShadow = this.settings.shadows;
-                this.fbxMixer = new THREE.AnimationMixer(fbx);
-                if (fbx.animations.length) {
-                    const action = this.fbxMixer.clipAction(fbx.animations[0]);
-                    action.play();
-                }
-                this.scene.add(fbx);
-                this.epstein.mesh = fbx;
-                this.epstein.useFBX = true;
-                this.epstein.mixer = this.fbxMixer;
-                resolve(true);
-            }, (xhr) => {
-                if (xhr.total) {
-                    const percent = Math.floor((xhr.loaded / xhr.total) * 100);
-                    this.updateLoadingProgress(90 + Math.floor(percent * 0.1), `Загрузка модели Эпштейна: ${percent}%`);
-                }
-            }, () => {
-                console.warn('⚠️ Модель epstein_run.fbx не найдена, использую стандартную');
-                resolve(false);
-            });
-        });
+        const fbxModel = this.assetManager.getModel('epstein_run');
+        if (fbxModel) {
+            // Заменяем стандартную модель на загруженную
+            if (this.epstein.mesh && this.scene) {
+                this.scene.remove(this.epstein.mesh);
+            }
+            fbxModel.scale.setScalar(0.02);
+            fbxModel.position.copy(this.epstein.position);
+            fbxModel.castShadow = this.settings.shadows;
+            this.fbxMixer = new THREE.AnimationMixer(fbxModel);
+            if (fbxModel.animations && fbxModel.animations.length) {
+                const action = this.fbxMixer.clipAction(fbxModel.animations[0]);
+                action.play();
+                console.log('🎬 Анимация Эпштейна запущена');
+            }
+            this.scene.add(fbxModel);
+            this.epstein.mesh = fbxModel;
+            this.epstein.useFBX = true;
+            this.epstein.mixer = this.fbxMixer;
+            console.log('👔 Модель Эпштейна загружена из AssetManager');
+            return true;
+        } else {
+            console.warn('⚠️ Модель epstein_run.fbx не найдена в AssetManager, использую стандартную');
+            return false;
+        }
     }
     
     setupRenderer() {
@@ -178,7 +174,7 @@ export class Game {
             console.error('Сцена не создана перед вызовом setupWorld');
             return;
         }
-        this.world = new World(this.scene, this.settings);
+        this.world = new World(this.scene, this.settings, this.assetManager);
     }
     
     setupLighting() {
