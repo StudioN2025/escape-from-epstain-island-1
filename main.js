@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { MenuScene } from './src/MenuScene.js';
 import { Game } from './game.js';
 
@@ -55,9 +58,9 @@ async function startLoadingResources() {
         loadingStatus.innerText = status;
     };
     
-    const textureLoader = new THREE.TextureLoader();
-    const gltfLoader = new THREE.GLTFLoader();
-    const fbxLoader = new THREE.FBXLoader();
+    const textureLoader = new THREE.TextureLoader();  // теперь THREE определён
+    const gltfLoader = new GLTFLoader();
+    const fbxLoader = new FBXLoader();
     
     const loadPromises = resources.map(res => {
         return new Promise((resolve) => {
