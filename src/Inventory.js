@@ -8,7 +8,7 @@ export class Inventory {
     createUI() {
         const invDiv = document.getElementById('inventory');
         if (!invDiv) {
-            console.error('Элемент #inventory не найден в DOM!');
+            console.error('Элемент #inventory не найден!');
             return;
         }
         invDiv.innerHTML = '';
@@ -36,7 +36,7 @@ export class Inventory {
         if (free !== -1) {
             this.items[free] = { id, icon };
             this.updateUI();
-            console.log(`Предмет ${id} добавлен в слот ${free}. Инвентарь:`, this.items);
+            console.log(`Предмет ${id} добавлен в слот ${free}.`);
             return true;
         }
         console.warn(`Нет свободного слота для ${id}`);
