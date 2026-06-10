@@ -43,7 +43,17 @@ export class AssetManager {
                 const loader = res.path.endsWith('.fbx') ? fbxLoader : gltfLoader;
                 return new Promise((resolve) => {
                     loader.load(res.path, (model) => {
-                        this.models.set(res.name, model);
+                        // Для GLTF нужно взять .scene, для FBX - сам объект
+                        let modelObj;
+                        if (model.scene) {
+                            // Это GLTF
+                            modelObj = model.scene;
+                        } else {
+                            // Это FBX
+                            modelObj = model;
+                        }
+                        // Сохраняем оригинал
+                        this.models.set(res.name, modelObj);
                         updateProgress(res.name, 'Модель');
                         resolve();
                     }, undefined, (err) => {
@@ -80,10 +90,19 @@ export class AssetManager {
 
     getModel(name) {
         const model = this.models.get(name);
-        return model ? model.clone() : null;
+        if (!model) return null;
+        // Возвращаем КЛОН модели, чтобы каждый раз был новый объект
+        // Это критически важно, т.к. одна и та же модель может использоваться в нескольких местах
+        return model.clone();
     }
 
     getSound(name) {
-        return this.sounds.get(name);
+        const sound = this.sounds.get(name);
+        if (!sound) return null;
+        // Для звуков возвращаем новый Audio с тем же src,
+        // чтобы можно было играть несколько звуков одновременно
+        const newAudio = new Audio(sound.src);
+        newAudio.load();
+        return newAudio;
     }
 }
