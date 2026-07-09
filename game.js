@@ -115,6 +115,12 @@ export class Game {
         
         this.deathSound = this.assetManager.getSound('death');
         this.winSound = this.assetManager.getSound('win');
+        this.bgmSound = this.assetManager.getSound('bgm');
+        if (this.bgmSound) {
+            this.bgmSound.loop = true;
+            this.bgmSound.volume = 0.3;
+            this.bgmSound.play().catch(() => {});
+        }
         
         this.updateLoadingProgress(100, 'Готово!');
         const loadingScreen = document.getElementById('loading-screen');
@@ -326,6 +332,7 @@ export class Game {
     
     winGame() {
         this.gameActive = false;
+        if (this.bgmSound) this.bgmSound.pause();
         this.ui.showWinScreen();
         if (document.exitPointerLock) document.exitPointerLock();
         document.getElementById('game-ui')?.classList.add('hidden');
@@ -398,6 +405,7 @@ export class Game {
     }
     
     gameOver() {
+        if (this.bgmSound) this.bgmSound.pause();
         const overlay = document.getElementById('death-overlay');
         if (overlay) overlay.style.opacity = '1';
         this.ui.showGameOver();

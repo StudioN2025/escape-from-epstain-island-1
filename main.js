@@ -51,6 +51,7 @@ const resources = [
     { type: 'sound', path: 'assets/sounds/menu.mp3', name: 'menu' },
     { type: 'sound', path: 'assets/sounds/death.mp3', name: 'death' },
     { type: 'sound', path: 'assets/sounds/win.mp3', name: 'win' },
+    { type: 'sound', path: 'assets/sounds/bgm.mp3', name: 'bgm' },
 ];
     
     const assetManager = new AssetManager();
