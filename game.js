@@ -117,13 +117,11 @@ export class Game {
         this.winSound = this.assetManager.getSound('win');
         
         this.updateLoadingProgress(100, 'Готово!');
-        setTimeout(() => {
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) loadingScreen.style.display = 'none';
-            document.getElementById('game-ui')?.classList.remove('hidden');
-            this.gameActive = true;
-            this.story.startGame();
-        }, 500);
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        document.getElementById('game-ui')?.classList.remove('hidden');
+        this.gameActive = true;
+        this.story.startGame();
         this.animate();
     }
     

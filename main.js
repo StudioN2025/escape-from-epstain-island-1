@@ -64,10 +64,8 @@ const resources = [
     loadingStatus.innerText = 'Готово!';
     setTimeout(() => {
         loadingScreen.style.display = 'none';
-        const menu = new MenuScene(assetManager, () => {
-            const game = new Game(assetManager);
-            game.start();
-        });
+        const game = new Game(assetManager);
+        game.start();
     }, 500);
 }
 
