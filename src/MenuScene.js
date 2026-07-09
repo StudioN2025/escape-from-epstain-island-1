@@ -31,6 +31,10 @@ export class MenuScene {
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.domElement.style.position = 'fixed';
+        this.renderer.domElement.style.top = '0';
+        this.renderer.domElement.style.left = '0';
+        this.renderer.domElement.style.zIndex = '50';
         document.body.appendChild(this.renderer.domElement);
         
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);

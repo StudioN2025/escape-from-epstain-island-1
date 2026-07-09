@@ -125,19 +125,14 @@ export class Game {
         this.updateLoadingProgress(100, 'Готово!');
         const loadingScreen = document.getElementById('loading-screen');
         if (loadingScreen) loadingScreen.style.display = 'none';
-        document.getElementById('game-ui')?.classList.remove('hidden');
-        this.gameActive = true;
-        this.story.startGame();
+        document.getElementById('game-ui')?.classList.add('hidden');
+        this.gameActive = false;
         this.animate();
     }
     
     async loadEpsteinFBX() {
         const fbxModel = this.assetManager.getModel('epstein_run');
         if (fbxModel) {
-            // Заменяем стандартную модель на загруженную
-            if (this.epstein.mesh && this.scene) {
-                this.scene.remove(this.epstein.mesh);
-            }
             fbxModel.scale.setScalar(0.02);
             fbxModel.position.copy(this.epstein.position);
             fbxModel.castShadow = this.settings.shadows;
@@ -145,17 +140,16 @@ export class Game {
             if (fbxModel.animations && fbxModel.animations.length) {
                 const action = this.fbxMixer.clipAction(fbxModel.animations[0]);
                 action.play();
-                console.log('🎬 Анимация Эпштейна запущена');
+            }
+            if (this.epstein.mesh && this.scene) {
+                this.scene.remove(this.epstein.mesh);
             }
             this.scene.add(fbxModel);
             this.epstein.mesh = fbxModel;
             this.epstein.mixer = this.fbxMixer;
-            console.log('👔 Модель Эпштейна загружена из AssetManager');
             return true;
-        } else {
-            console.warn('⚠️ Модель epstein_run.fbx не найдена в AssetManager, использую стандартную');
-            return false;
         }
+        return false;
     }
     
     setupRenderer() {
@@ -492,6 +486,6 @@ export class Game {
     }
     
     start() {
-        this.init();
+        this.init().then(() => this.startGame());
     }
 }
