@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Остров Эпштейна - Побег</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👔</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { overflow: hidden; font-family: 'Courier New', monospace; }
+        
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 500; display: flex; justify-content: center;
+            align-items: center; color: white; font-size: 24px; cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0a0a2a 0%, #1a1a3a 100%);
+            display: none; justify-content: center; align-items: center; z-index: 200;
+        }
+        .loading-content { text-align: center; color: white; }
+        .loading-spinner {
+            width: 60px; height: 60px; margin: 20px auto;
+            border: 5px solid rgba(255,170,68,0.3); border-top: 5px solid #ffaa44;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 24px; margin-top: 20px; color: #ffaa44; font-weight: bold; }
+        .loading-bar-container { width: 300px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 20px auto; overflow: hidden; }
+        .loading-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffaa44, #ffcc66); border-radius: 10px; transition: width 0.3s; }
+        
+        #game-ui {
+            position: fixed; width: 100%; height: 100%; pointer-events: none; z-index: 10;
+        }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            background: white; border-radius: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.5); pointer-events: none;
+        }
+        #interaction-prompt {
+            position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px;
+            border-radius: 8px; border-left: 4px solid #ffaa00;
+            animation: pulse 1s infinite; backdrop-filter: blur(5px);
+            font-weight: bold; pointer-events: none;
+        }
+        @keyframes pulse { 0% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.05); } 100% { opacity: 0.7; transform: translateX(-50%) scale(1); } }
+        
+        #inventory {
+            position: absolute; bottom: 20px; right: 20px;
+            background: rgba(0,0,0,0.8); border-radius: 12px; padding: 10px;
+            backdrop-filter: blur(5px); border: 1px solid #ffaa44;
+            display: none; gap: 10px; flex-direction: row;
+        }
+        .inventory-slot {
+            width: 50px; height: 50px; background: rgba(0,0,0,0.7); border: 1px solid #ffaa44;
+            border-radius: 5px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; position: relative;
+        }
+        .inventory-slot span:first-child { position: absolute; bottom: 2px; right: 5px; font-size: 10px; color: #aaa; }
+        .slot-item { font-size: 28px; }
+        
+        #quest-log {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0,0,0,0.8); padding: 12px 20px; border-radius: 8px;
+            backdrop-filter: blur(5px); border-left: 3px solid #ffaa44;
+            max-width: 280px; pointer-events: none;
+        }
+        #quest-log h3 { color: #ffaa44; font-size: 14px; margin-bottom: 5px; }
+        #quest-text { color: white; font-size: 12px; line-height: 1.4; }
+        
+        #message-area {
+            position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); color: #ffaa44; padding: 10px 20px;
+            border-radius: 8px; text-align: center; animation: fadeOut 3s forwards;
+            pointer-events: none; white-space: nowrap; font-weight: bold;
+        }
+        @keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        
+        #status {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.8); color: #ffaa88; padding: 10px 18px;
+            border-radius: 8px; font-weight: bold; font-size: 14px;
+            text-align: right; backdrop-filter: blur(4px); border-right: 3px solid #ff5500;
+        }
+        #stamina-bar {
+            position: absolute; bottom: 20px; left: 20px;
+            width: 200px; height: 15px; background: rgba(0,0,0,0.6);
+            border-radius: 10px; overflow: hidden; border: 1px solid #ffaa44;
+        }
+        #stamina-value { width: 100%; height: 100%; background: #44ff44; transition: width 0.1s; }
+        
+        #death-overlay, #win-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 300; pointer-events: none; opacity: 0; transition: opacity 0.5s;
+        }
+        .game-over-content, .win-content {
+            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 20px;
+            text-align: center; border: 2px solid #ffaa44; min-width: 320px;
+            backdrop-filter: blur(10px);
+        }
+        button {
+            background: #ffaa44; color: #1a1a1a; border: none; padding: 12px 30px;
+            margin: 10px; font-size: 16px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; font-family: monospace; transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.05); background: #ffcc66; }
+        #game-over, #win-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center;
+            align-items: center; z-index: 100; backdrop-filter: blur(5px);
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="welcome-screen">
+        <div style="text-align:center;">
+            <div style="font-size:48px; margin-bottom:20px;">🏝️</div>
+            <div>НАЖМИТЕ ЛЮБУЮ КЛАВИШУ ИЛИ КЛИКНИТЕ</div>
+            <div style="font-size:14px; margin-top:20px;">ДЛЯ ЗАГРУЗКИ ИГРЫ</div>
+        </div>
+    </div>
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">ЗАГРУЗКА РЕСУРСОВ</div>
+            <div class="loading-bar-container"><div class="loading-bar" id="loading-bar"></div></div>
+            <div class="loading-percent" id="loading-percent">0%</div>
+            <div class="loading-subtext" id="loading-status">Подготовка...</div>
+        </div>
+    </div>
+    <div id="death-overlay"></div>
+    <div id="win-overlay"></div>
+
+    <div id="game-ui" class="hidden">
+        <div id="crosshair"></div>
+        <div id="interaction-prompt" class="hidden"><div class="prompt-content"><span class="key-icon">🔑</span><span id="prompt-text">Нажмите E</span></div></div>
+        <div id="inventory"></div>
+        <div id="quest-log"><h3>📜 ЗАДАНИЕ</h3><p id="quest-text">Сбегите с острова Эпштейна</p></div>
+        <div id="message-area" class="hidden"><div id="message-text"></div></div>
+        <div id="status">🚪 ДВЕРЬ: <span id="distance-indicator">---</span> м<br>👔 ЭПШТЕЙН: <span id="monster-status">❌</span></div>
+        <div id="stamina-bar"><div id="stamina-value"></div></div>
+    </div>
+
+    <div id="game-over" class="hidden"><div class="game-over-content"><h2>💀 ВАС СХВАТИЛ ЭПШТЕЙН 💀</h2><p>Вы не смогли сбежать с его острова...</p><button id="retry-btn">🔄 ПОПРОБОВАТЬ СНОВА</button></div></div>
+    <div id="win-screen" class="hidden"><div class="win-content"><h2>🎉 ПОБЕДА! 🎉</h2><p>Вы уплыли с острова Эпштейна!<br>Эпштейн остался позади, сжимая кулаки.</p><button id="play-again">🏆 ИГРАТЬ СНОВА</button></div></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
